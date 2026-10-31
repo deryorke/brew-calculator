@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="description" content="Brew Calculator: calculate your coffee recipe and brew with confidence.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#70472f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Brew Calc">
+<title>BREW CALCULATOR</title>
+<style>
+/* ===== Tokens ===== */
+:root{color-scheme:light;--bg:#f5f1e9;--surface:#fffdf8;--surface-soft:#eee7dc;--beige:#eee7dc;--text:#30251f;--muted:#6b5f54;--line:#e4dbcf;--accent:#70472f;--accent-strong:#553421;--accent-soft:#e8d8c8;--accent-text:#fffdf8;--green:#728064;--shadow:0 18px 45px rgba(61,43,29,.08);--radius:18px;--serif:Georgia,"Times New Roman",serif;--sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#201b18;--surface:#2b2420;--surface-soft:#372d27;--beige:#372d27;--text:#f3e9dd;--muted:#b9aa9c;--line:#473a31;--accent:#d2a47e;--accent-strong:#f0c7a3;--accent-soft:#4c392d;--accent-text:#201b18;--green:#b0be9e;--shadow:0 18px 45px rgba(0,0,0,.25)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;padding-bottom:84px;overflow-x:hidden}
+h1,h2,h3{font-family:var(--serif);margin:0 0 .5rem;line-height:1.2;font-weight:400;letter-spacing:-.02em}
+h1{font-size:clamp(2rem,8vw,3.4rem);letter-spacing:.02em}
+h2{font-size:1.5rem;margin-top:1.5rem}
+h3{font-size:1.15rem;margin-top:1.25rem}
+p{margin:0 0 .75rem}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.topbar{display:flex;align-items:center;justify-content:space-between}
+.brand{background:none;border:0;font-family:var(--serif);font-weight:700;letter-spacing:.06em;cursor:pointer;font-size:1rem;display:flex;align-items:center;gap:10px;color:var(--text);padding:0}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0)}
+.nav button{background:none;border:0;padding:.25rem;cursor:pointer;color:var(--muted)}
+.nav button[aria-current="page"]{font-weight:700;box-shadow:inset 0 3px 0 var(--accent)}
+main{margin:0 auto;max-width:1040px;padding:0 1.1rem 2.5rem}
+.view[hidden]{display:none}
+.hero{min-height:350px;display:grid;grid-template-columns:1fr .94fr;overflow:hidden}
+.hero p{font-size:1.1rem;color:var(--muted)}
+.actions,.controls{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
+.row{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.btn{min-height:48px;padding:.6rem 1.1rem;border:1px solid var(--line);background:var(--surface);cursor:pointer;border-radius:12px;font-weight:600;transition:background .18s,border-color .18s,transform .1s}
+.btn.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.card{background:var(--surface);border:1px solid var(--line);margin-bottom:1rem;border-radius:var(--radius);box-shadow:var(--shadow);padding:1.25rem}
+.form{display:grid;gap:.9rem}
+label{display:grid;gap:.3rem;font-weight:600;font-size:.88rem;color:var(--muted)}
+input,select{min-height:48px;padding:.5rem .75rem;border:1px solid var(--line);width:100%;border-radius:12px;background:var(--bg);transition:border-color .15s,box-shadow .15s}
+.search{margin:.5rem 0 1rem;border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+.switch{display:flex;align-items:center;justify-content:space-between;min-height:48px}
+.switch input{width:24px;min-height:24px;height:24px}
+.list{display:grid;gap:1rem}
+.item{display:flex;justify-content:space-between;gap:.75rem;background:var(--surface);border:1px solid var(--line)}
+.item h3{margin:0;font-size:1.05rem}
+.item-actions{display:flex;gap:.4rem;flex-shrink:0}
+.item-actions .btn{min-height:44px;padding:.4rem .9rem}
+.empty{color:var(--muted);border:1px dashed var(--line);border-radius:var(--radius);padding:1.1rem;text-align:center}
+.timer-card{text-align:center;padding:1.8rem 1.2rem;max-width:620px;margin-left:auto;margin-right:auto}
+.timer-display{font-family:var(--serif);font-size:clamp(4rem,22vw,7rem);font-variant-numeric:tabular-nums;line-height:1;font-weight:300;letter-spacing:-.03em}
+.progress{height:10px;background:var(--beige);border-radius:99px;overflow:hidden;margin:1rem 0}
+.bar{height:100%;width:0;background:var(--accent);transition:width .3s}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;text-align:left}
+.stats span{display:block;font-size:.85rem}
+.stats strong{font-size:1.05rem}
+.instruction{margin-top:1rem;text-align:center;color:var(--muted)}
+.controls{justify-content:center}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:.5rem}
+.steps li{display:flex;justify-content:space-between;gap:1rem;background:var(--surface);border:1px solid var(--line);padding:.7rem 1rem;border-radius:14px;align-items:center}
+.steps li.active{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent);background:var(--accent-soft)}
+dialog{border:1px solid var(--line);background:var(--surface);color:var(--text);width:min(92vw,420px);max-height:90vh;overflow:auto;border-radius:var(--radius);box-shadow:0 24px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(20,10,5,.55)}
+@media (min-width:768px){
+  body{padding-bottom:0}
+  .nav{position:static;display:flex;gap:.25rem;background:none;border:0;padding:0}
+  .nav button{min-height:44px;padding:.4rem .9rem;border-radius:999px;font-size:.95rem;box-shadow:none!important}
+  .nav button[aria-current="page"]{background:var(--beige)}
+  .topbar{max-width:1000px;margin:0 auto;padding:1rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+[hidden]{display:none!important}
+.error{color:#9B2C2C;background:#F8E3DF;border-radius:12px;padding:.6rem .9rem;margin:0 0 1rem}
+:root[data-theme="dark"] .error{color:#F3C1B8;background:#4A2420}
+input[aria-invalid="true"]{border-color:#B3402F;outline:2px solid #B3402F}
+.step-name{font-family:var(--serif);font-size:1.7rem;line-height:1.2;font:800 .9rem var(--sans);letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin:.9rem 0 .2rem}
+.pour{margin:0 0 .6rem;font-family:var(--serif);font-size:1.45rem;color:var(--text)}
+.next{margin:.5rem 0 1rem;background:var(--accent-soft);color:var(--accent-strong);border-radius:12px;padding:.7rem 1rem;text-align:center;font-weight:600}
+.steps li.done{opacity:.5}
+.result h3{margin-top:0;font-size:1.7rem;margin:0 0 .4rem}
+.result .steps{margin-top:.75rem}
+.summary{display:grid;gap:.25rem;text-align:left;margin:1rem 0}
+.summary div{display:flex;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--line);padding:.5rem 0}
+.summary dt{color:var(--muted)}
+.summary dd{margin:0;font-family:var(--serif);font-size:1.1rem;font-weight:400}
+h2,h3,.step-name,.item-title,.steps li span,.summary dd,.stats strong{overflow-wrap:anywhere}
+.steps li span:first-child{min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1rem}
+.chip{min-height:40px;padding:.3rem .85rem;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:.9rem;font-weight:600;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);font-weight:600;color:var(--accent-text)}
+.badge{display:inline-block;justify-self:start;padding:.05rem .55rem;border-radius:99px;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent-soft);color:var(--accent-strong)}
+.item-main{display:grid;gap:.15rem;min-width:0;flex:1}
+.link{background:none;border:0;padding:0;text-align:left;cursor:pointer;min-height:44px;display:flex;align-items:center}
+.item-title{font-family:var(--serif);font-size:1.3rem;font-weight:400}
+.note{border-radius:12px;padding:.6rem .9rem;margin:0 0 1rem;background:var(--accent-soft);color:var(--accent-strong)}
+.error ul{margin:.25rem 0 0;padding-left:1.2rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(72px + env(safe-area-inset-bottom,0px));max-width:92vw;background:var(--text);color:var(--bg);padding:.7rem 1rem;z-index:20;text-align:center}
+.step-edit{display:grid;gap:.6rem;margin-bottom:0}
+.step-edit-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.step-edit .item-actions{flex-wrap:wrap}
+.steps li.step-detail{display:block}
+.step-top{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.step-detail p{margin:.25rem 0 0}
+.title-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+dialog .actions{margin-top:1rem}
+@media (max-width:480px){.item{flex-wrap:wrap}.item-actions{width:100%}.item-actions .btn{flex:1}}
+@media (min-width:768px){.toast{bottom:1.5rem}}
+.timer-display.long{font-size:clamp(2.6rem,14vw,5rem)}
+.hero-copy{padding:38px 8% 32px;display:flex;align-items:flex-start;flex-direction:column;justify-content:center}
+.eyebrow-line{width:21px;height:1px;background:var(--accent);display:inline-block}
+.hero-description{max-width:280px;margin-bottom:23px;color:var(--muted);font-size:13px}
+.hero-actions{display:flex;flex-wrap:wrap;gap:9px}
+.hero-meta{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:10px}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.hero-art{min-height:350px;position:relative;overflow:hidden;background:#ded0bc;isolation:isolate}
+:root[data-theme="dark"] .hero-art{background:#4b392d}
+.sun-disc{position:absolute;width:180px;height:180px;right:13%;top:8%;border-radius:50%;background:#f0e4cf;opacity:.95}
+.dripper{position:absolute;z-index:2;top:20%;left:43%;width:115px;height:102px;transform:translateX(-50%);clip-path:polygon(0 0, 100% 0, 77% 100%, 23% 100%);background:#6e4b36}
+.dripper:before{content:"";position:absolute;top:12px;left:15px;right:15px;height:7px;border-radius:50%;background:#d5b08c}
+.dripper-ridge{position:absolute;top:31px;left:26px;width:64px;height:1px;background:#b18a66;transform:rotate(13deg)}
+.dripper-ridge.second{top:47px;transform:rotate(-13deg)}
+.coffee-stream{position:absolute;z-index:3;top:47%;left:43%;width:3px;height:47px;background:#81573a;border-radius:50%}
+.server{position:absolute;z-index:2;top:52%;left:43%;transform:translateX(-50%);width:120px;height:105px;border:3px solid rgba(255,250,239,.85);border-top:0;clip-path:polygon(13% 0, 87% 0, 75% 100%, 25% 100%);background:rgba(255,250,239,.27)}
+.server-coffee{position:absolute;bottom:0;left:0;right:0;height:40%;background:#8a5a3c;opacity:.9}
+.server-handle{position:absolute;right:-24px;top:18px;width:35px;height:50px;border:5px solid rgba(255,250,239,.8);border-left:0;border-radius:0 20px 20px 0}
+.art-counter{position:absolute;height:21%;left:-4%;right:-4%;bottom:0;background:#b49a7c;transform:rotate(-3deg)}
+.art-label{position:absolute;z-index:4;font-size:8px;font-weight:800;letter-spacing:1.5px;line-height:1.7;color:#684c37}
+.art-label-top{right:8%;top:14%}
+.art-label-bottom{left:8%;bottom:7%;color:#f8eee1}
+.art-label-bottom span{padding-left:5px;font-size:15px}
+.coffee-bean{position:absolute;z-index:2;width:20px;height:30px;border-radius:50%;background:#795238;transform:rotate(35deg)}
+.coffee-bean:after{content:"";position:absolute;top:3px;bottom:3px;left:9px;width:1px;background:#c49b75;transform:rotate(9deg)}
+.bean-one{bottom:25%;left:20%}
+.bean-two{bottom:17%;right:20%;transform:rotate(-28deg) scale(.7)}
+.recipe-art-icon{color:var(--accent);font-size:42px}
+@media (min-width: 1500px){.hero{ min-height: 390px; }.hero-art{ min-height: 390px; }}
+@media (max-width: 1100px){.hero-copy{ padding-inline: 7%; }}
+@media (max-width: 780px){.hero{ grid-template-columns: 1fr; }.hero-copy{ padding: 30px 25px; }.hero-art{ min-height: 245px; }.hero h1{ font-size: 46px; }.hero-meta{ margin-top: 20px; }}
+@media (max-width: 420px){.hero-actions{ width: 100%; }.hero-copy{ padding: 27px 20px; }.hero h1{ font-size: 42px; }}
+body{font-size:15px;transition:background .2s,color .2s}
+h1 em,h2 em{color:var(--accent);font-style:italic;font-weight:400}
+.eyebrow{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;letter-spacing:1.6px;font-weight:700;text-transform:uppercase}
+.page-head{margin:1.4rem 0 1.2rem}
+.page-title{font-size:clamp(2rem,6vw,3rem);margin:.45rem 0 .4rem;line-height:1.08}
+.lead{color:var(--muted);max-width:46ch;margin:0}
+.section-heading{margin:2.2rem 0 .9rem}
+.section-heading h2{margin:.35rem 0 0;font-size:1.7rem}
+/* shell: top bar + bottom nav on phones, sidebar on desktop */
+.topbar{padding:.8rem 1.1rem;border-bottom:1px solid var(--line);gap:.8rem}
+.brand-mark{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:50% 50% 45% 45%;background:var(--accent);color:var(--accent-text);font:italic 700 21px var(--serif)}
+.brand-name{font:800 11px/1.45 var(--sans);letter-spacing:1.9px;text-align:left}
+.brand-name span{display:block;font-size:10px;letter-spacing:2.4px;font-weight:500}
+.icon-btn{width:40px;height:40px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--text);font-size:19px;cursor:pointer;display:grid;place-items:center}
+.icon-btn:hover{border-color:var(--accent)}
+.nav{box-shadow:0 -8px 30px rgba(61,43,29,.06)}
+.nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.72rem;font-weight:600;min-height:62px;box-shadow:none!important}
+.nav button::before{width:46px;height:26px;border-radius:13px;display:grid;place-items:center;font-size:1.15rem;line-height:1;transition:background .18s}
+.nav [data-view=home]::before{content:"⌂"}
+.nav [data-view=calculator]::before{content:"⌗"}
+.nav [data-view=recipes]::before{content:"▤"}
+.nav [data-view=timer]::before{content:"◷"}
+.nav [data-view=settings]::before{content:"⚙"}
+.nav button[aria-current="page"]{color:var(--accent-strong)}
+.nav button[aria-current="page"]::before{background:var(--accent-soft)}
+.nav .full{display:none}
+@media(min-width:768px) and (max-width:899px){body{padding-bottom:84px}.nav{position:fixed;left:0;right:0;bottom:0;display:grid;background:var(--surface);border-top:1px solid var(--line);padding:0 0 env(safe-area-inset-bottom,0)}.nav button{border-radius:0;font-size:.78rem}.nav button[aria-current="page"]{background:none}.topbar{max-width:none;margin:0}}
+@media(min-width:900px){
+  body{padding-left:238px;padding-bottom:0}
+  .topbar{position:fixed;inset:0 auto 0 0;width:238px;max-width:none;margin:0;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:30px 18px 22px;background:var(--surface);border:0;border-right:1px solid var(--line);z-index:10}
+  .brand{padding:0 9px 34px}
+  .nav{position:static;display:grid;grid-template-columns:1fr;gap:5px;background:none;border:0;box-shadow:none;padding:0}
+  .nav button{flex-direction:row;justify-content:flex-start;gap:13px;min-height:44px;padding:0 13px;border-radius:10px;font-size:.95rem;font-weight:550;text-align:left}
+  .nav button::before{width:20px;height:auto;background:none!important;font-size:1.15rem}
+  .nav button:hover{background:var(--bg);color:var(--text)}
+  .nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent-strong);font-weight:700}
+  .nav .full{display:inline}.nav .short{display:none}
+  .icon-btn{margin-top:auto;align-self:flex-start}
+  main{padding:1rem 2.5rem 3rem}
+}
+/* controls */
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn.primary:hover:not(:disabled){background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-text)}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+label input,label select{color:var(--text);font-weight:400}
+.chip:hover{border-color:var(--accent);color:var(--text)}
+.toast{pointer-events:none;border-radius:14px;box-shadow:var(--shadow)}
+/* home */
+.hero{padding:0;margin-top:1rem;background:var(--surface);border-radius:20px;box-shadow:var(--shadow)}
+.hero h1{font-size:clamp(2.3rem,5vw,3.6rem);line-height:1.04;letter-spacing:-.04em;margin:.9rem 0 .8rem}
+.hero .hero-description{max-width:300px;font-size:.95rem;color:var(--muted);margin-bottom:1.2rem}
+.hero-actions{margin-top:0}
+.hero-meta{margin-top:1.2rem}
+#recipe-list,#recent-recipes,#favorite-recipes{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.item{flex-direction:column;align-items:stretch;border-radius:var(--radius);box-shadow:var(--shadow);padding:1.2rem;position:relative;overflow:hidden}
+.item::before{content:"";position:absolute;right:-26px;top:-26px;width:86px;height:86px;border-radius:50%;background:var(--accent-soft);opacity:.7}
+.item-main,.item-actions{position:relative}
+.item-actions{width:100%;margin-top:.4rem}
+.item-actions .btn{flex:0 0 auto}
+.item-actions .btn[data-action=brew]{flex:1}
+/* calculator */
+#view-calculator{display:grid;grid-template-columns:minmax(0,1fr);gap:0 1.5rem;align-items:start}
+#calc-form{grid-template-columns:1fr 1fr;gap:1rem}
+#calc-form label:nth-child(-n+2),#calc-form label:last-child{grid-column:1/-1}
+.result{border-top:4px solid var(--accent)}
+@media(min-width:1000px){#view-calculator{grid-template-columns:1fr 1fr}#view-calculator>.page-head{grid-column:1/-1}#calc-form{grid-column:1;grid-row:2/span 3}#calc-error{grid-column:2;grid-row:2}#calc-result{grid-column:2;grid-row:3}#btn-calc-to-brew{grid-column:2;grid-row:4;justify-self:start}}
+/* timer */
+.timer-head{text-align:center;margin-top:1.2rem}
+#timer-method{text-transform:uppercase;letter-spacing:.18em;font-size:.75rem;font-weight:700;margin-bottom:.2rem}
+#timer-recipe{font-size:1.6rem;margin:0 0 1rem}
+.stats>div{background:var(--bg);border-radius:12px;padding:.7rem .9rem}
+.controls .btn{flex:1 1 92px}
+#view-timer h3{max-width:620px;margin-left:auto;margin-right:auto}
+#timer-steps{max-width:620px;margin:0 auto}
+/* settings: toggle switches */
+label.switch input[type=checkbox]{appearance:none;-webkit-appearance:none;width:48px;min-height:0;height:28px;flex:none;border:0;border-radius:99px;background:var(--line);position:relative;cursor:pointer;transition:background .2s;padding:0}
+label.switch input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+label.switch input[type=checkbox]:checked{background:var(--accent)}
+label.switch input[type=checkbox]:checked::after{transform:translateX(20px)}
+label.switch input[type=checkbox]:disabled{opacity:.45;cursor:not-allowed}
+label.switch{color:var(--text);font-weight:500}
+#view-settings .card{max-width:680px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.steps li.active .muted{color:var(--accent-strong)}
+.backup-actions{display:flex;flex-wrap:wrap;gap:.6rem}
+.backup-actions .btn{flex:1 1 140px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="brand" data-view="home" aria-label="Brew Calculator home"><span class="brand-mark" aria-hidden="true">B</span><span class="brand-name">BREW<span>CALCULATOR</span></span></button>
+  <nav class="nav" aria-label="Main">
+    <button data-view="home">Home</button>
+    <button data-view="calculator">Calculator</button>
+    <button data-view="recipes">Recipes</button>
+    <button data-view="timer"><span class="full">Brewing Timer</span><span class="short">Timer</span></button>
+    <button data-view="settings">Settings</button>
+  </nav>
+  <button class="icon-btn" id="theme-quick" type="button" aria-label="Toggle light and dark mode">◐</button>
+</header>
+
+<main id="app">
+  <section id="view-home" class="view" data-view-name="home">
+    <div class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-line"></span> BREW CALCULATOR · YOUR DAILY COFFEE RITUAL</div>
+        <h1>Make every<br>cup <em>count.</em></h1>
+        <p class="hero-description">Calculate your coffee recipe and brew with confidence.</p>
+        <div class="actions hero-actions">
+          <button class="btn primary" id="btn-home-calculate" type="button">Calculate Coffee <span aria-hidden="true">↗</span></button>
+          <button class="btn" id="btn-home-brew" type="button">Start Brewing <span aria-hidden="true">▶</span></button>
+          <button class="btn" id="btn-home-recipes" type="button">Browse Recipes</button>
+        </div>
+        <div class="hero-meta"><span class="status-dot"></span> A better brew, one step at a time</div>
+      </div>
+      <div class="hero-art" aria-label="Illustration of a pour-over coffee setup" role="img">
+              <div class="sun-disc"></div>
+              <div class="art-label art-label-top">SLOW DOWN<br>AND POUR</div>
+              <div class="coffee-bean bean-one"></div><div class="coffee-bean bean-two"></div>
+              <div class="dripper"><div class="dripper-ridge"></div><div class="dripper-ridge second"></div></div>
+              <div class="coffee-stream"></div>
+              <div class="server"><div class="server-coffee"></div><div class="server-handle"></div></div>
+              <div class="art-counter"></div>
+              <div class="art-label art-label-bottom">EST. IN THE DETAILS <span>✳</span></div>
+            </div>
+    </div>
+    <div class="section-heading"><div class="eyebrow">Pick up where you left off</div><h2>Recent recipes</h2></div>
+    <div id="recent-recipes" class="list"></div>
+    <div class="section-heading"><div class="eyebrow">Keep your best close</div><h2>Favorite recipes</h2></div>
+    <div id="favorite-recipes" class="list"></div>
+  </section>
+
+  <section id="view-calculator" class="view" data-view-name="calculator" hidden>
+    <div class="page-head"><div class="eyebrow">Precision, made simple</div><h2 class="page-title">Coffee <em>calculator.</em></h2><p class="lead">Adjust your coffee, water, or ratio. The other values follow the one you changed.</p></div>
+    <form id="calc-form" class="card form" onsubmit="return false">
+      <label>Brewing Method
+        <select id="calc-method"></select></label>
+      <label>Recipe
+        <select id="calc-recipe"></select></label>
+      <label><span>Coffee Dose (<span class="u-wt">g</span>)</span>
+        <input id="calc-dose" type="number" inputmode="decimal" min="0" step="any"></label>
+      <label><span>Water (<span class="u-water">g</span>)</span>
+        <input id="calc-water" type="number" inputmode="decimal" min="0" step="any"></label>
+      <label>Ratio (1 : x)
+        <input id="calc-ratio" type="number" inputmode="decimal" min="1" step="any"></label>
+      <label><span>Temperature (<span class="u-temp">°C</span>)</span>
+        <input id="calc-temp" type="number" inputmode="numeric" min="0" max="100"></label>
+      <label>Grind Size
+        <select id="calc-grind"></select></label>
+    </form>
+    <p id="calc-error" class="error" role="alert" hidden></p>
+    <div id="calc-result" class="card result" aria-live="polite">
+      <p class="muted">Your results will appear here.</p>
+    </div>
+    <button class="btn primary" id="btn-calc-to-brew">Go to Brewing</button>
+  </section>
+
+  <section id="view-recipes" class="view" data-view-name="recipes" hidden>
+    <div class="row page-head"><div><div class="eyebrow">The brew library</div><h2 class="page-title">Recipes for your <em>ritual.</em></h2><p class="lead">Built-in starting points and your own recipes, all in one place.</p></div><button class="btn primary" id="btn-create-recipe">＋ Create Recipe</button></div>
+    <input id="recipe-search" class="search" type="search" placeholder="Search recipes or methods" aria-label="Search recipes">
+    <div id="recipe-filters" class="chips" role="group" aria-label="Filter recipes"></div>
+    <div id="recipe-list" class="list"></div>
+  </section>
+
+  <section id="view-timer" class="view" data-view-name="timer" hidden>
+    <div class="timer-head"><div class="eyebrow" style="justify-content:center">Take it one pour at a time</div>
+      <p id="timer-method" class="muted">No method</p>
+      <h2 id="timer-recipe">No recipe selected</h2>
+    </div>
+    <div id="timer-live" class="card timer-card">
+      <div id="timer-display" class="timer-display" role="timer">00:00</div>
+      <p id="timer-step" class="step-name">Ready</p>
+      <p id="timer-pour" class="pour">Pour to 0 g</p>
+      <div class="progress" title="Step progress"><div id="timer-step-progress" class="bar"></div></div>
+      <p id="timer-instruction" class="instruction">Choose a recipe to see its steps.</p>
+      <p id="timer-next" class="next muted"></p>
+      <div class="stats">
+        <div><span class="muted">Target Water (total)</span><strong id="timer-target">0 g</strong></div>
+        <div><span class="muted">Overall</span><strong id="timer-overall-text">00:00 / 00:00</strong></div>
+      </div>
+      <div class="progress" title="Overall progress"><div id="timer-progress" class="bar"></div></div>
+      <div class="controls">
+        <button class="btn primary" id="btn-start" disabled>Start</button>
+        <button class="btn" id="btn-pause" disabled>Pause</button>
+        <button class="btn" id="btn-resume" disabled>Resume</button>
+        <button class="btn" id="btn-reset" disabled>Reset</button>
+        <button class="btn" id="btn-skip" disabled>Skip</button>
+      </div>
+      <p id="timer-unit-note" class="muted small" hidden></p>
+      <p id="timer-status" class="muted small" aria-live="polite"></p>
+      <p id="long-hint" class="note small" hidden>Long brew: turn on Notifications in Settings and keep this app open in the background. A locked phone can pause the timer.</p>
+    </div>
+    <div id="timer-complete" class="card timer-card" hidden>
+      <h2>BREW COMPLETE</h2>
+      <dl id="complete-summary" class="summary"></dl>
+      <div class="controls">
+        <button class="btn primary" id="btn-brew-again">Brew Again</button>
+        <button class="btn" id="btn-back-recipes">Back to Recipes</button>
+        <button class="btn" id="btn-back-home">Back to Home</button>
+      </div>
+    </div>
+    <h3>Steps</h3>
+    <ol id="timer-steps" class="steps"></ol>
+  </section>
+
+  <section id="view-settings" class="view" data-view-name="settings" hidden>
+    <div class="page-head"><div class="eyebrow">Make it yours</div><h2 class="page-title">Your brew <em>settings.</em></h2><p class="lead">Preferences are saved in this browser.</p></div>
+    <div class="card form">
+      <label>Language / Bahasa
+        <select id="set-language"><option value="en">English</option><option value="id">Bahasa Indonesia</option></select></label>
+      <label class="switch">Dark mode <input type="checkbox" id="set-theme"></label>
+      <label class="switch">Sound <input type="checkbox" id="set-sound"></label>
+      <label class="switch">Vibration <input type="checkbox" id="set-vibrate"></label>
+      <p id="vibrate-note" class="muted small" hidden>Vibration is not supported on this device or browser.</p>
+      <label class="switch">Notifications when a step ends <input type="checkbox" id="set-notify"></label>
+      <p id="notify-note" class="muted small">Alerts are sent only while the timer is running in the background. If the phone locks or the browser closes the page, the timer can pause and no alert will arrive.</p>
+      <label class="switch">Auto advance step <input type="checkbox" id="set-autoadvance"></label>
+      <label>Timer display
+        <select id="set-timermode"><option value="down">Countdown</option><option value="up">Count up</option></select></label>
+      <label>Units
+        <select id="set-units"><option value="metric">Metric</option><option value="imperial">Imperial</option></select></label>
+      <label>Water measure (metric only)
+        <select id="set-watermeasure"><option value="weight">Weight in grams (recommended)</option><option value="volume">Volume in ml (approximate)</option></select></label>
+      <p id="units-note" class="muted small"></p>
+      <label class="switch">Keep screen awake while brewing <input type="checkbox" id="set-wakelock"></label>
+      <p id="wakelock-note" class="muted small" hidden>Screen Wake Lock is not available here. It needs a supporting browser and HTTPS or localhost.</p>
+      <h3>Backup</h3>
+      <p class="muted small">Export your own recipes to a JSON file, or import recipes from one. Built-in recipes are not included.</p>
+       <div class="backup-actions">
+         <button class="btn" id="btn-export" type="button">Export recipes</button>
+         <button class="btn" id="btn-import" type="button">Import recipes</button>
+         <input type="file" id="import-file" accept=".json,application/json" hidden>
+       </div>
+             <p class="muted small">Your recipes, favorites and settings are saved only in this browser on this device. They are not synced to other devices or browsers.</p>
+    </div>
+  </section>
+  <section id="view-recipe-detail" class="view" data-view-name="recipe-detail" hidden>
+    <button class="btn" id="btn-detail-back">Back to Recipes</button>
+    <div id="recipe-detail"></div>
+  </section>
+
+  <section id="view-recipe-form" class="view" data-view-name="recipe-form" hidden>
+    <h2 id="form-title">Create Recipe</h2>
+    <p id="form-banner" class="note" hidden></p>
+    <div id="form-errors" class="error" role="alert" hidden></div>
+    <form id="recipe-form" class="card form" onsubmit="return false" novalidate>
+      <label>Recipe Name <input id="f-name" type="text" maxlength="60" autocomplete="off"></label>
+      <label>Brewing Method <select id="f-method"></select></label>
+      <label><span>Coffee Dose (<span class="u-wt">g</span>)</span> <input id="f-dose" type="number" inputmode="decimal" step="any"></label>
+      <label><span>Total Water (<span class="u-water">g</span>)</span> <input id="f-water" type="number" inputmode="decimal" step="any"></label>
+      <label>Ratio (1 : x) <input id="f-ratio" type="number" inputmode="decimal" step="any"></label>
+      <label><span>Temperature (<span class="u-temp">°C</span>)</span> <input id="f-temp" type="number" inputmode="decimal" step="any"></label>
+      <label>Grind Size <select id="f-grind"></select></label>
+      <label>Estimated Brew Time (optional) <input id="f-estimate" type="text" maxlength="30" placeholder="For example 2:30–3:00"></label>
+    </form>
+    <h3>Brewing Steps</h3>
+    <p id="f-steps-hint" class="muted small"></p>
+    <div id="f-steps" class="list"></div>
+    <div class="actions"><button class="btn" id="btn-add-step" type="button">Add Step</button></div>
+    <div class="actions">
+      <button class="btn primary" id="btn-save-recipe" type="button">Save Recipe</button>
+      <button class="btn" id="btn-cancel-recipe" type="button">Cancel</button>
+    </div>
+  </section>
+</main>
+
+<dialog id="confirm-dialog" aria-labelledby="confirm-title">
+  <h3 id="confirm-title"></h3>
+  <p id="confirm-message"></p>
+  <div class="actions">
+    <button class="btn primary" id="confirm-ok" type="button">Confirm</button>
+    <button class="btn" id="confirm-cancel" type="button">Cancel</button>
+  </div>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+'use strict';
+/* BREW CALCULATOR - pure logic (no DOM). Loaded before app.js; also usable from Node for tests. */
+(function (root) {
+  const round = (v, dp = 2) => { const f = 10 ** dp; return Math.round((v + Number.EPSILON) * f) / f; };
+  const formatNumber = (n, dp = 2) => String(round(n, dp));
+  const formatRatio = (r) => '1:' + formatNumber(r);
+  function formatTime(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    const p = (n) => String(n).padStart(2, '0');
+    return h ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+  }
+
+  /* ---------- Calculator ---------- */
+  const LIMITS = { dose: 5000, water: 100000, ratio: 100 };
+  const LABELS = { dose: 'Coffee dose', water: 'Water', ratio: 'Ratio' };
+  function parseField(raw, label, max) {
+    if (raw === null || raw === undefined || String(raw).trim() === '') return { error: `${label} is empty. Enter a number greater than 0.` };
+    const n = Number(String(raw).trim().replace(',', '.'));
+    if (!Number.isFinite(n)) return { error: `${label} must be a valid number.` };
+    if (n < 0) return { error: `${label} cannot be negative.` };
+    if (n === 0) return { error: `${label} must be greater than 0.` };
+    if (n > max) return { error: `${label} is too large.` };
+    return { value: n };
+  }
+  /* changed: 'dose' | 'water' | 'ratio'. dose/ratio edits derive water; a water edit derives dose. */
+  function calcFrom(changed, raw) {
+    const need = changed === 'water' ? ['water', 'ratio'] : ['dose', 'ratio'];
+    const v = {};
+    for (const k of need) {
+      const p = parseField(raw[k], LABELS[k], LIMITS[k]);
+      if (p.error) return { ok: false, field: k, error: p.error };
+      v[k] = p.value;
+    }
+    let dose, water;
+    if (changed === 'water') { water = v.water; dose = round(water / v.ratio, 2); }
+    else { dose = v.dose; water = round(dose * v.ratio, 1); }
+    if (!(dose > 0) || !(water > 0) || dose > LIMITS.dose || water > LIMITS.water) {
+      return { ok: false, field: changed, error: 'These values give a result that is out of range. Adjust them.' };
+    }
+    return { ok: true, dose, water, ratio: v.ratio };
+  }
+
+  /* Returns NEW steps; the original recipe is never mutated. Targets stay cumulative. */
+  function scaleSteps(steps, origWater, newWater) {
+    const f = newWater / origWater;
+    let prev = 0;
+    const out = steps.map((s) => {
+      let t = Math.min(round(s.targetWater * f, 1), newWater);
+      if (t < prev) t = prev;
+      prev = t;
+      return { ...s, targetWater: t };
+    });
+    if (out.length && Math.abs(steps[steps.length - 1].targetWater - origWater) < 0.005) out[out.length - 1].targetWater = newWater;
+    return out;
+  }
+
+  /* ---------- Recipe validation ---------- */
+  function normalizeRecipe(r) {
+    const c = JSON.parse(JSON.stringify(r));
+    if (Array.isArray(c.steps)) c.steps = c.steps.map((s, i) => ({ ...s, name: String((s && s.name) || '').trim() || `Step ${i + 1}` }));
+    return c;
+  }
+  /* Pouring-style methods need cumulative, non-decreasing targets that end at the total water.
+     Espresso and Custom are exempt: their targets only have to stay within 0..total water. */
+  const METHODS = ['V60 / Pour Over', 'French Press', 'AeroPress', 'Espresso', 'Cold Brew', 'Custom'];
+  const GRINDS = ['Extra fine', 'Fine', 'Medium-fine', 'Medium', 'Medium-coarse', 'Coarse', 'Extra coarse'];
+  const POURING_EXEMPT = ['Espresso', 'Custom'];
+  const isPouring = (method) => !POURING_EXEMPT.includes(method);
+  function validateRecipe(r) {
+    const errors = [];
+    if (!r || typeof r !== 'object') return ['Recipe is missing.'];
+    if (!String(r.name || '').trim()) errors.push('Recipe has no name.');
+    if (!(r.dose > 0)) errors.push('Coffee dose must be greater than 0.');
+    if (!(r.water > 0)) errors.push('Water must be greater than 0.');
+    if (!Array.isArray(r.steps) || !r.steps.length) { errors.push('Recipe has no steps.'); return errors; }
+    const strict = isPouring(r.method);
+    let prev = 0, last = null;
+    r.steps.forEach((s, i) => {
+      s = s || {};
+      const n = i + 1;
+      last = null;
+      if (!String(s.name || '').trim()) errors.push(`Step ${n} has no name.`);
+      if (!Number.isFinite(s.duration) || s.duration <= 0) errors.push(`Step ${n}: duration must be greater than 0.`);
+      if (!Number.isFinite(s.targetWater) || s.targetWater < 0 || s.targetWater > r.water + 1e-9) errors.push(`Step ${n}: target water must be between 0 and ${r.water} g.`);
+      else {
+        if (strict && s.targetWater < prev - 1e-9) errors.push(`Step ${n}: target water cannot be lower than the previous step.`);
+        else prev = s.targetWater;
+        last = s.targetWater;
+      }
+    });
+    if (strict && last !== null && Math.abs(last - r.water) > 0.005) errors.push(`The last step must reach the total water (${r.water} g).`);
+    return errors;
+  }
+
+  /* ---------- Timer engine: elapsed time always derived from timestamps ---------- */
+  function buildTimeline(steps) {
+    const starts = [], ends = [];
+    let t = 0;
+    steps.forEach((s) => { starts.push(t); t += s.duration * 1000; ends.push(t); });
+    return { starts, ends, total: t, count: steps.length };
+  }
+  function locate(tl, elapsedMs) {
+    const el = Math.max(0, elapsedMs);
+    if (el >= tl.total) return { index: tl.count - 1, done: true };
+    let i = 0;
+    while (el >= tl.ends[i]) i++;
+    return { index: i, done: false };
+  }
+  /* opts.now(): ms clock (performance.now in the app). opts.isAutoAdvance(): boolean. */
+  function createTimerEngine(steps, opts) {
+    const now = opts.now, isAuto = opts.isAutoAdvance || (() => true);
+    const tl = buildTimeline(steps);
+    const e = { status: 'idle', baseMs: 0, startedAt: 0, index: 0, waiting: false, timeline: tl };
+    const elapsed = () => Math.min(e.baseMs + (e.status === 'running' ? now() - e.startedAt : 0), tl.total);
+    function snap(events) {
+      const el = elapsed();
+      const idx = e.status === 'complete' ? tl.count - 1 : e.index;
+      const dur = steps[idx].duration * 1000;
+      return { status: e.status, index: idx, stepElapsedMs: Math.min(Math.max(el - tl.starts[idx], 0), dur),
+               stepDurationMs: dur, overallMs: el, totalMs: tl.total, waiting: e.waiting, events: events || [] };
+    }
+    function advance() {
+      const events = [];
+      if (e.status !== 'running' && e.status !== 'paused') return events;
+      const el = elapsed();
+      if (el >= tl.total) { e.baseMs = tl.total; e.status = 'complete'; e.waiting = false; e.index = tl.count - 1; events.push('complete'); return events; }
+      if (isAuto()) {
+        const idx = locate(tl, el).index;
+        if (idx !== e.index) { e.index = idx; events.push('step'); }
+        e.waiting = false;
+      } else if (el >= tl.ends[e.index]) {
+        e.baseMs = tl.ends[e.index];
+        if (e.status === 'running') e.startedAt = now();
+        if (!e.waiting) { e.waiting = true; events.push('stepEnd'); }
+      }
+      return events;
+    }
+    e.update = () => snap(advance());
+    e.start = () => {
+      if (e.status === 'idle') Object.assign(e, { baseMs: 0, startedAt: now(), status: 'running', index: 0, waiting: false });
+      return snap();
+    };
+    e.pause = () => {
+      const ev = advance();
+      if (e.status === 'running') { e.baseMs = elapsed(); e.status = 'paused'; }
+      return snap(ev);
+    };
+    e.resume = () => {
+      const ev = advance();
+      if (e.status === 'paused') { e.startedAt = now(); e.status = 'running'; }
+      return snap(ev);
+    };
+    e.reset = () => { Object.assign(e, { status: 'idle', baseMs: 0, startedAt: 0, index: 0, waiting: false }); return snap(); };
+    e.skip = () => {
+      const ev = advance();
+      if (e.status !== 'running' && e.status !== 'paused') return snap(ev);
+      if (e.index >= tl.count - 1) { e.baseMs = tl.total; e.status = 'complete'; e.waiting = false; ev.push('complete'); }
+      else {
+        e.index += 1; e.baseMs = tl.starts[e.index]; e.waiting = false;
+        if (e.status === 'running') e.startedAt = now();
+        ev.push('step');
+      }
+      return snap(ev);
+    };
+    return e;
+  }
+
+
+  /* ---------- Units: internal values are always grams and °C ---------- */
+  const OZ_G = 28.349523125;
+  const gToOz = (g) => g / OZ_G;
+  const ozToG = (oz) => oz * OZ_G;
+  const cToF = (c) => (c * 9) / 5 + 32;
+  const fToC = (f) => ((f - 32) * 5) / 9;
+
+  /* ---------- Recipe form: parse + validate user input (strings in display units) -> internal recipe ---------- */
+  function parseRecipeDraft(d, units) {
+    d = d || {};
+    const imp = units === 'imperial', wU = imp ? 'oz' : 'g', errors = [];
+    const add = (field, message) => errors.push({ field, message });
+    const num = (s) => (s === null || s === undefined || String(s).trim() === '' ? NaN : Number(String(s).trim().replace(',', '.')));
+    const pos = (v) => Number.isFinite(v) && v > 0;
+    const toG = (v) => round(imp ? ozToG(v) : v, 2);
+    const name = String(d.name || '').trim();
+    if (!name) add('name', 'Enter a recipe name.');
+    else if (name.length > 60) add('name', 'Recipe name must be 60 characters or fewer.');
+    if (!METHODS.includes(d.method)) add('method', 'Choose a brewing method.');
+    if (!GRINDS.includes(d.grind)) add('grind', 'Choose a grind size.');
+    const dose = num(d.dose), water = num(d.water), ratio = num(d.ratio), tIn = num(d.temp);
+    if (!pos(dose)) add('dose', `Coffee dose must be a number greater than 0 ${wU}.`);
+    if (!pos(water)) add('water', `Total water must be a number greater than 0 ${wU}.`);
+    const ratioOk = pos(ratio) && ratio <= 100;
+    if (!ratioOk) add('ratio', 'Ratio must be a number above 0 and up to 100 (for example 16 for 1:16).');
+    const tempC = imp ? fToC(tIn) : tIn;
+    if (!Number.isFinite(tIn) || tempC < 0 || tempC > 100) add('temp', imp ? 'Temperature must be between 32 and 212 °F.' : 'Temperature must be between 0 and 100 °C.');
+    if (pos(dose) && pos(water) && ratioOk && Math.abs(water / dose - ratio) > ratio * 0.02 + 0.01) {
+      add('ratio', `Ratio 1:${ratio} does not match ${dose} ${wU} coffee and ${water} ${wU} water (that is about 1:${round(water / dose, 2)}). Change one of them.`);
+    }
+    const steps = Array.isArray(d.steps) ? d.steps : [];
+    const strict = isPouring(d.method);
+    const out = [];
+    if (!steps.length) add('steps', 'Add at least one step.');
+    let prev = 0, lastT = null;
+    steps.forEach((s, i) => {
+      s = s || {};
+      const n = i + 1, f = (k) => `step-${i}-${k}`;
+      lastT = null;
+      const sName = String(s.name || '').trim();
+      if (!sName) add(f('name'), `Step ${n}: enter a step name.`);
+      else if (sName.length > 60) add(f('name'), `Step ${n}: the name must be 60 characters or fewer.`);
+      const dur = num(s.duration);
+      if (!Number.isFinite(dur)) add(f('duration'), `Step ${n}: enter the duration in seconds.`);
+      else if (dur < 0) add(f('duration'), `Step ${n}: duration cannot be negative.`);
+      else if (dur < 1) add(f('duration'), `Step ${n}: duration must be at least 1 second.`);
+      else if (!Number.isInteger(dur)) add(f('duration'), `Step ${n}: use whole seconds for the duration.`);
+      else if (dur > 259200) add(f('duration'), `Step ${n}: duration is too long (3 days maximum).`);
+      const t = num(s.target);
+      if (!Number.isFinite(t)) add(f('target'), `Step ${n}: enter the target water as a running total in ${wU}.`);
+      else if (t < 0) add(f('target'), `Step ${n}: target water cannot be negative.`);
+      else if (pos(water) && t > water + 1e-9) add(f('target'), `Step ${n}: target water (${t} ${wU}) cannot be more than the total water (${water} ${wU}).`);
+      else if (strict && t < prev - 1e-9) add(f('target'), `Step ${n}: target (${t} ${wU}) is lower than the previous step (${prev} ${wU}). Targets are running totals, so each step should be the same or higher.`);
+      else { if (strict) prev = t; lastT = t; }
+      const instruction = String(s.instruction || '').trim();
+      if (instruction.length > 200) add(f('instruction'), `Step ${n}: the instruction must be 200 characters or fewer.`);
+      out.push({ name: sName, duration: dur, targetWater: Number.isFinite(t) ? toG(t) : NaN, instruction });
+    });
+    if (strict && lastT !== null && pos(water) && Math.abs(lastT - water) > 1e-9) {
+      add(`step-${steps.length - 1}-target`, `The last step must reach the total water (${water} ${wU}); it currently ends at ${lastT} ${wU}.`);
+    }
+    if (errors.length) return { errors, recipe: null };
+    return { errors, recipe: { name, method: d.method, dose: toG(dose), water: toG(water), ratio: round(ratio, 2), temp: round(tempC, 1),
+      grind: d.grind, estimate: String(d.estimate || '').trim().slice(0, 30), steps: out, builtIn: false } };
+  }
+
+  /* ---------- Stored data: versioned, defensive ---------- */
+  const SCHEMA_VERSION = 2;
+  const ENUMS = { theme: ['light', 'dark'], timerMode: ['down', 'up'], units: ['metric', 'imperial'], waterMeasure: ['weight', 'volume'], language: ['en', 'id'] };
+  const BOOLS = ['sound', 'vibrate', 'notify', 'autoAdvance', 'wakeLock'];
+  function newId(taken) {
+    let id;
+    do { id = 'u-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7); } while (taken && taken.has(id));
+    return id;
+  }
+  function cleanRecipe(r) {
+    if (!r || typeof r !== 'object' || !Array.isArray(r.steps)) return null;
+    const num = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
+    const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+    const dose = num(r.dose, 0), water = num(r.water, 0), temp = num(r.temp, 92);
+    const c = { id: typeof r.id === 'string' ? r.id : '', name: str(r.name, 60), method: METHODS.includes(r.method) ? r.method : 'Custom', dose, water,
+      ratio: num(r.ratio, 0) > 0 ? r.ratio : (dose > 0 ? round(water / dose, 2) : 0), temp: temp >= 0 && temp <= 100 ? temp : 92,
+      grind: GRINDS.includes(r.grind) ? r.grind : 'Medium', estimate: str(r.estimate, 30), builtIn: false,
+      steps: r.steps.map((s, i) => { s = s || {}; return { name: str(s.name, 60) || `Step ${i + 1}`, duration: num(s.duration, 0), targetWater: num(s.targetWater, -1), instruction: str(s.instruction, 200) }; }) };
+    if (typeof r.basedOn === 'string') c.basedOn = r.basedOn;
+    return c;
+  }
+  /* raw: parsed JSON, undefined (nothing stored) or null (unreadable). Never throws. Older/newer versions: known fields are read, the rest ignored. */
+  function sanitizeStored(raw, builtInIds) {
+    const out = { settings: {}, favorites: [], userRecipes: [], recent: [], lastRecipeId: null };
+    const warnings = [];
+    if (raw === undefined) return { data: out, warnings };
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) { warnings.push('Saved data could not be read, so defaults were restored.'); return { data: out, warnings }; }
+    const s = raw.settings;
+    if (s && typeof s === 'object') {
+      Object.keys(ENUMS).forEach((k) => { if (ENUMS[k].includes(s[k])) out.settings[k] = s[k]; });
+      BOOLS.forEach((k) => { if (typeof s[k] === 'boolean') out.settings[k] = s[k]; });
+    }
+    const ids = new Set(builtInIds || []);
+    if (Array.isArray(raw.userRecipes)) {
+      raw.userRecipes.forEach((item) => {
+        const c = cleanRecipe(item);
+        if (!c || validateRecipe(c).length) { warnings.push(`Skipped a saved recipe that was invalid${c && c.name ? ` ("${c.name}")` : ''}.`); return; }
+        if (!c.id || ids.has(c.id)) c.id = newId(ids);
+        ids.add(c.id);
+        out.userRecipes.push(c);
+      });
+    }
+    const idList = (v) => (Array.isArray(v) ? [...new Set(v.filter((x) => typeof x === 'string' && ids.has(x)))] : []);
+    out.favorites = idList(raw.favorites);
+    out.recent = idList(raw.recent).slice(0, 5);
+    out.lastRecipeId = typeof raw.lastRecipeId === 'string' && ids.has(raw.lastRecipeId) ? raw.lastRecipeId : null;
+    return { data: out, warnings };
+  }
+
+  const api = { METHODS, GRINDS, isPouring, OZ_G, gToOz, ozToG, cToF, fToC, parseRecipeDraft, SCHEMA_VERSION, sanitizeStored, newId, round, formatNumber, formatRatio, formatTime, calcFrom, scaleSteps, normalizeRecipe, validateRecipe, buildTimeline, locate, createTimerEngine };
+  root.BrewLogic = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+/* BREW CALCULATOR - language layer. English is the source language; Indonesian is looked up in I18N.dict.
+   T(key, vars)  translates a fixed key and fills {placeholders}.
+   TM(text)      translates an already-built message (logic-layer validation text) by matching its template.
+   Internal data (method names, grind sizes, saved recipes) always stays in English; only the display is translated. */
+const I18N = { lang: 'en', dict: {
+ "Vibration": "Getaran",
+ "Vibration is not supported on this device or browser.": "Getaran tidak didukung di perangkat atau browser ini.",
+ "Notifications when a step ends": "Notifikasi saat langkah selesai",
+ "Alerts are sent only while the timer is running in the background. If the phone locks or the browser closes the page, the timer can pause and no alert will arrive.": "Peringatan hanya dikirim saat timer berjalan di latar belakang. Jika ponsel terkunci atau browser menutup halaman, timer bisa berhenti dan peringatan tidak akan datang.",
+ "Long brew: turn on Notifications in Settings and keep this app open in the background. A locked phone can pause the timer.": "Seduhan panjang: aktifkan Notifikasi di Pengaturan dan biarkan aplikasi terbuka di latar belakang. Ponsel yang terkunci bisa menghentikan timer.",
+ "Notifications are not supported on this browser.": "Notifikasi tidak didukung di browser ini.",
+ "Notifications are blocked. Allow them in the browser or site settings to use this.": "Notifikasi diblokir. Izinkan lewat pengaturan browser atau situs untuk memakainya.",
+ "Brew complete": "Seduhan selesai",
+ "{name} is ready.": "{name} sudah siap.",
+ "Step finished: {name}": "Langkah selesai: {name}",
+ "Open the timer to continue.": "Buka timer untuk melanjutkan.",
+ "Backup": "Cadangan",
+ "Export your own recipes to a JSON file, or import recipes from one. Built-in recipes are not included.": "Ekspor resepmu sendiri ke file JSON, atau impor resep dari file tersebut. Resep bawaan tidak ikut.",
+ "Export recipes": "Ekspor resep",
+ "Import recipes": "Impor resep",
+ "You have no recipes of your own to export yet.": "Kamu belum punya resep sendiri untuk diekspor.",
+ "Exported {n} recipe(s).": "{n} resep diekspor.",
+ "This file is too large to import.": "File ini terlalu besar untuk diimpor.",
+ "This file is not valid JSON.": "File ini bukan JSON yang valid.",
+ "This file does not contain Brew Calculator recipes.": "File ini tidak berisi resep Brew Calculator.",
+ "Imported {n} recipe(s).": "{n} resep diimpor.",
+ "Imported {n} recipe(s). Skipped {s} (invalid or already saved).": "{n} resep diimpor. {s} dilewati (tidak valid atau sudah tersimpan).",
+ "No new recipes were imported. Skipped {s} (invalid or already saved).": "Tidak ada resep baru yang diimpor. {s} dilewati (tidak valid atau sudah tersimpan).",
+ "No recipes found in this file.": "Tidak ada resep di file ini.",
+ "Brew Calculator home": "Beranda Brew Calculator",
+ "Main": "Utama",
+ "Home": "Beranda",
+ "Calculator": "Kalkulator",
+ "Recipes": "Resep",
+ "Brewing Timer": "Timer Seduh",
+ "Timer": "Timer",
+ "Settings": "Pengaturan",
+ "Toggle light and dark mode": "Ganti mode terang dan gelap",
+ "BREW CALCULATOR · YOUR DAILY COFFEE RITUAL": "BREW CALCULATOR · RITUAL KOPI HARIANMU",
+ "Make every": "Setiap",
+ "cup": "cangkir",
+ "count.": "berarti.",
+ "Calculate your coffee recipe and brew with confidence.": "Hitung resep kopimu dan seduh dengan percaya diri.",
+ "Calculate Coffee": "Hitung Kopi",
+ "Start Brewing": "Mulai Menyeduh",
+ "Browse Recipes": "Jelajahi Resep",
+ "A better brew, one step at a time": "Seduhan yang lebih baik, selangkah demi selangkah",
+ "Illustration of a pour-over coffee setup": "Ilustrasi peralatan kopi pour-over",
+ "SLOW DOWN": "PELAN-PELAN",
+ "AND POUR": "DAN TUANG",
+ "EST. IN THE DETAILS": "BERMULA DARI DETAIL",
+ "Pick up where you left off": "Lanjutkan dari terakhir kali",
+ "Recent recipes": "Resep terbaru",
+ "Keep your best close": "Simpan yang terbaik di dekatmu",
+ "Favorite recipes": "Resep favorit",
+ "Precision, made simple": "Presisi, dibuat sederhana",
+ "Coffee": "Kalkulator",
+ "calculator.": "kopi.",
+ "Adjust your coffee, water, or ratio. The other values follow the one you changed.": "Ubah dosis kopi, air, atau rasio. Nilai lainnya mengikuti yang kamu ubah.",
+ "Brewing Method": "Metode Seduh",
+ "Recipe": "Resep",
+ "Coffee Dose (": "Dosis Kopi (",
+ "Water (": "Air (",
+ "Ratio (1 : x)": "Rasio (1 : x)",
+ "Temperature (": "Suhu (",
+ "Grind Size": "Ukuran Gilingan",
+ "Your results will appear here.": "Hasil perhitunganmu akan muncul di sini.",
+ "Go to Brewing": "Lanjut ke Penyeduhan",
+ "The brew library": "Pustaka seduh",
+ "Recipes for your": "Resep untuk",
+ "ritual.": "ritualmu.",
+ "Built-in starting points and your own recipes, all in one place.": "Resep bawaan dan resep buatanmu sendiri, semuanya di satu tempat.",
+ "＋ Create Recipe": "＋ Buat Resep",
+ "Search recipes or methods": "Cari resep atau metode",
+ "Search recipes": "Cari resep",
+ "Filter recipes": "Filter resep",
+ "Take it one pour at a time": "Tuang satu per satu",
+ "No method": "Belum ada metode",
+ "No recipe selected": "Belum ada resep dipilih",
+ "Ready": "Siap",
+ "Step progress": "Progres langkah",
+ "Choose a recipe to see its steps.": "Pilih resep untuk melihat langkah-langkahnya.",
+ "Target Water (total)": "Target Air (total)",
+ "Overall": "Keseluruhan",
+ "Overall progress": "Progres keseluruhan",
+ "Start": "Mulai",
+ "Pause": "Jeda",
+ "Resume": "Lanjutkan",
+ "Reset": "Reset",
+ "Skip": "Lewati",
+ "BREW COMPLETE": "SEDUHAN SELESAI",
+ "Brew Again": "Seduh Lagi",
+ "Back to Recipes": "Kembali ke Resep",
+ "Back to Home": "Kembali ke Beranda",
+ "Steps": "Langkah",
+ "Make it yours": "Sesuaikan",
+ "Your brew": "Pengaturan",
+ "settings.": "seduhanmu.",
+ "Preferences are saved in this browser.": "Preferensi disimpan di browser ini.",
+ "Dark mode": "Mode gelap",
+ "Sound": "Suara",
+ "Auto advance step": "Langkah lanjut otomatis",
+ "Timer display": "Tampilan timer",
+ "Countdown": "Hitung mundur",
+ "Count up": "Hitung maju",
+ "Units": "Satuan",
+ "Metric": "Metrik",
+ "Imperial": "Imperial",
+ "Water measure (metric only)": "Ukuran air (khusus metrik)",
+ "Weight in grams (recommended)": "Berat dalam gram (disarankan)",
+ "Volume in ml (approximate)": "Volume dalam ml (perkiraan)",
+ "Keep screen awake while brewing": "Jaga layar tetap menyala saat menyeduh",
+ "Screen Wake Lock is not available here. It needs a supporting browser and HTTPS or localhost.": "Screen Wake Lock tidak tersedia di sini. Fitur ini memerlukan browser yang mendukung serta HTTPS atau localhost.",
+ "Your recipes, favorites and settings are saved only in this browser on this device. They are not synced to other devices or browsers.": "Resep, favorit, dan pengaturanmu hanya disimpan di browser ini pada perangkat ini. Data tidak disinkronkan ke perangkat atau browser lain.",
+ "Create Recipe": "Buat Resep",
+ "Recipe Name": "Nama Resep",
+ "Total Water (": "Total Air (",
+ "Estimated Brew Time (optional)": "Perkiraan Waktu Seduh (opsional)",
+ "For example 2:30–3:00": "Contoh 2:30–3:00",
+ "Brewing Steps": "Langkah Penyeduhan",
+ "Add Step": "Tambah Langkah",
+ "Save Recipe": "Simpan Resep",
+ "Cancel": "Batal",
+ "Confirm": "Konfirmasi",
+ "Custom": "Kustom",
+ "Extra fine": "Sangat halus",
+ "Fine": "Halus",
+ "Medium-fine": "Agak halus",
+ "Medium": "Sedang",
+ "Medium-coarse": "Agak kasar",
+ "Coarse": "Kasar",
+ "Extra coarse": "Sangat kasar",
+ "All Recipes": "Semua Resep",
+ "Favorites": "Favorit",
+ "Classic V60": "V60 Klasik",
+ "Standard AeroPress": "AeroPress Standar",
+ "Custom Brew": "Seduh Kustom",
+ "Bloom": "Bloom",
+ "First Pour": "Tuangan Pertama",
+ "Second Pour": "Tuangan Kedua",
+ "Final Pour": "Tuangan Akhir",
+ "Pour": "Tuang",
+ "Steep": "Rendam",
+ "Press": "Tekan",
+ "Add Water": "Tambah Air",
+ "Pre-infusion": "Pra-infusi",
+ "Extraction": "Ekstraksi",
+ "Filter": "Saring",
+ "Slowly pour water up to {target} g total, then wait until the step ends.": "Tuang air perlahan hingga total {target} g, lalu tunggu sampai langkah selesai.",
+ "Slowly pour water until the total reaches {target} g.": "Tuang air perlahan hingga total mencapai {target} g.",
+ "Pour water until the total reaches {target} g.": "Tuang air hingga total mencapai {target} g.",
+ "Pour water until the total reaches {target} g, then wait for the drawdown to finish.": "Tuang air hingga total mencapai {target} g, lalu tunggu hingga drawdown selesai.",
+ "Pour water up to {target} g total.": "Tuang air hingga total {target} g.",
+ "Wait, then break the crust of coffee on the surface.": "Tunggu, lalu pecahkan lapisan ampas kopi di permukaan.",
+ "Press the plunger slowly, then serve.": "Tekan plunger perlahan, lalu sajikan.",
+ "Pour water up to {target} g total, stir, then insert the plunger.": "Tuang air hingga total {target} g, aduk, lalu pasang plunger.",
+ "Wait for the brew to finish steeping.": "Tunggu hingga proses seduh selesai.",
+ "Press slowly and steadily.": "Tekan perlahan dan stabil.",
+ "Wet the coffee with {target} g of water in total.": "Basahi kopi dengan total air {target} g.",
+ "Extract until {target} g in total has reached the cup.": "Ekstrak hingga total {target} g masuk ke cangkir.",
+ "Pour water up to {target} g total and make sure all the coffee is wet.": "Tuang air hingga total {target} g dan pastikan semua kopi basah.",
+ "Steep for 12 hours at room temperature or in the fridge.": "Rendam selama 12 jam pada suhu ruang atau di kulkas.",
+ "Strain the coffee, then store it in the fridge.": "Saring kopi, lalu simpan di kulkas.",
+ "Wait until the timer runs out.": "Tunggu sampai timer habis.",
+ "Fix the highlighted input to see your recipe.": "Perbaiki isian yang ditandai untuk melihat resepmu.",
+ "{dose} coffee + {water} water": "{dose} kopi + {water} air",
+ "Ratio {ratio} · {temp} · {grind}": "Rasio {ratio} · {temp} · {grind}",
+ "Estimated brew time": "Perkiraan waktu seduh",
+ "Built-in recipe": "Resep bawaan",
+ "Heads up: {ratio} is outside the usual 1:{lo}–1:{hi} for {method}. Expect a {dir} cup.": "Perhatian: {ratio} berada di luar kisaran umum 1:{lo}–1:{hi} untuk {method}. Hasilnya akan terasa {dir}.",
+ "weaker": "lebih ringan",
+ "stronger": "lebih kuat",
+ "Temperature must be between 0 and 100 °C (32 to 212 °F).": "Suhu harus antara 0 dan 100 °C (32 hingga 212 °F).",
+ "Water in ml assumes about 1 g per ml, which is an approximation.": "Air dalam ml diasumsikan sekitar 1 g per ml, yang hanya perkiraan.",
+ "Imperial: ounces by weight (1 oz = 28.3495 g) and °F. Recipes keep their original values; only the display changes.": "Imperial: ons berdasarkan berat (1 oz = 28,3495 g) dan °F. Resep tetap memakai nilai aslinya; hanya tampilannya yang berubah.",
+ "Metric with water in ml. ml assumes water is about 1 g per ml, which is only an approximation. Grams are more accurate.": "Metrik dengan air dalam ml. ml mengasumsikan air sekitar 1 g per ml, yang hanya perkiraan. Gram lebih akurat.",
+ "Metric: grams and °C. Weighing water in grams is the most accurate way to brew.": "Metrik: gram dan °C. Menimbang air dalam gram adalah cara menyeduh yang paling akurat.",
+ "Pour to 0 {unit}": "Tuang hingga 0 {unit}",
+ "Pick a recipe from Recipes and tap Brew, or use the Calculator.": "Pilih resep dari Resep lalu ketuk Seduh, atau gunakan Kalkulator.",
+ "Extract to {amount} yield · step {i} of {n}": "Ekstrak hingga yield {amount} · langkah {i} dari {n}",
+ "Pour to {amount} · step {i} of {n}": "Tuang hingga {amount} · langkah {i} dari {n}",
+ "Pour to {amount} total.": "Tuang hingga total {amount}.",
+ "Next: {name} · target total {target}": "Berikutnya: {name} · target total {target}",
+ "Last step": "Langkah terakhir",
+ "Step finished. Tap Skip for the next step.": "Langkah selesai. Ketuk Lewati untuk langkah berikutnya.",
+ "Ready. Tap Start when you begin pouring.": "Siap. Ketuk Mulai saat kamu mulai menuang.",
+ "Brewing": "Menyeduh",
+ "Paused": "Dijeda",
+ "Coffee Dose": "Dosis Kopi",
+ "Water": "Air",
+ "Ratio": "Rasio",
+ "Temperature": "Suhu",
+ "Total Brew Time": "Total Waktu Seduh",
+ "A brew is in progress. Replace it with this recipe?": "Seduhan sedang berlangsung. Ganti dengan resep ini?",
+ "This browser is not letting the app save data. Changes will be lost when you close the page.": "Browser ini tidak mengizinkan aplikasi menyimpan data. Perubahan akan hilang saat halaman ditutup.",
+ " (+{n} more)": " (+{n} lainnya)",
+ "Built-in": "Bawaan",
+ "Mine": "Milikku",
+ "Remove from favorites": "Hapus dari favorit",
+ "Add to favorites": "Tambahkan ke favorit",
+ "Brew": "Seduh",
+ "No recipes match “{q}”{in}. Try another word or clear the search.": "Tidak ada resep yang cocok dengan “{q}”{in}. Coba kata lain atau hapus pencarian.",
+ " in {label}": " di {label}",
+ "You have no favorites yet. Tap ☆ on any recipe to keep it here.": "Belum ada favorit. Ketuk ☆ pada resep mana pun untuk menyimpannya di sini.",
+ "There are no {label} recipes yet. You can create one.": "Belum ada resep {label}. Kamu bisa membuatnya.",
+ "Clear search and filters": "Hapus pencarian dan filter",
+ "No recent recipes yet. Start a brew and it shows up here.": "Belum ada resep terbaru. Mulai menyeduh dan resepnya akan muncul di sini.",
+ "No favorites yet. Tap ☆ on a recipe to save it.": "Belum ada favorit. Ketuk ☆ pada resep untuk menyimpannya.",
+ "Method": "Metode",
+ "Total Water": "Total Air",
+ "Estimated Time": "Perkiraan Waktu",
+ "Not set": "Belum diatur",
+ "Timer Total": "Total Timer",
+ "Adjust in Calculator": "Atur di Kalkulator",
+ "★ Favorite": "★ Favorit",
+ "☆ Add to favorites": "☆ Tambah ke favorit",
+ "Edit as my copy": "Edit sebagai salinanku",
+ "Edit": "Edit",
+ "Duplicate": "Duplikat",
+ "Delete": "Hapus",
+ "Built-in recipes cannot be changed or deleted. Editing creates your own copy and the original stays as it is.": "Resep bawaan tidak dapat diubah atau dihapus. Mengedit akan membuat salinanmu sendiri dan resep asli tetap seperti semula.",
+ "Edit Recipe": "Edit Resep",
+ "Save as My Recipe": "Simpan sebagai Resepku",
+ "Built-in recipes cannot be changed. Saving creates your own copy; the original stays untouched.": "Resep bawaan tidak dapat diubah. Menyimpan akan membuat salinanmu sendiri; resep asli tidak berubah.",
+ "Saving creates a new recipe. The original is not changed.": "Menyimpan akan membuat resep baru. Resep asli tidak berubah.",
+ "{name} (copy)": "{name} (salinan)",
+ "Target water is a running total. Each step should be the same or higher than the one before, and the last step must reach the total water.": "Target air adalah total berjalan. Setiap langkah harus sama atau lebih tinggi dari langkah sebelumnya, dan langkah terakhir harus mencapai total air.",
+ "For this method, targets only need to be between 0 and the total water. Their order and the last step are up to you.": "Untuk metode ini, target hanya perlu berada di antara 0 dan total air. Urutan dan langkah terakhir terserah kamu.",
+ "Step {n}": "Langkah {n}",
+ "Up": "Naik",
+ "Down": "Turun",
+ "Move step {n} up": "Naikkan langkah {n}",
+ "Move step {n} down": "Turunkan langkah {n}",
+ "Delete step {n}": "Hapus langkah {n}",
+ "Step Name": "Nama Langkah",
+ "Duration (seconds)": "Durasi (detik)",
+ "Target Water, running total (": "Target Air, total berjalan (",
+ "Instruction (use {target} for the amount)": "Instruksi (gunakan {target} untuk jumlahnya)",
+ "Please fix these before saving:": "Perbaiki hal berikut sebelum menyimpan:",
+ "A recipe needs at least one step.": "Resep membutuhkan minimal satu langkah.",
+ "Recipe saved.": "Resep disimpan.",
+ "Recipe created.": "Resep dibuat.",
+ "Recipe deleted.": "Resep dihapus.",
+ "That recipe no longer exists.": "Resep itu sudah tidak ada.",
+ "Built-in recipes cannot be deleted. Duplicate it to make your own version.": "Resep bawaan tidak dapat dihapus. Duplikat untuk membuat versimu sendiri.",
+ "Delete this recipe?": "Hapus resep ini?",
+ "“{name}” will be removed from this browser. This cannot be undone.": "“{name}” akan dihapus dari browser ini. Tindakan ini tidak dapat dibatalkan.",
+ "{label} is empty. Enter a number greater than 0.": "{label} kosong. Masukkan angka lebih besar dari 0.",
+ "{label} must be a valid number.": "{label} harus berupa angka yang valid.",
+ "{label} cannot be negative.": "{label} tidak boleh negatif.",
+ "{label} must be greater than 0.": "{label} harus lebih besar dari 0.",
+ "{label} is too large.": "{label} terlalu besar.",
+ "Coffee dose": "Dosis kopi",
+ "These values give a result that is out of range. Adjust them.": "Nilai-nilai ini menghasilkan angka di luar batas. Sesuaikan nilainya.",
+ "Recipe has no name.": "Resep belum memiliki nama.",
+ "Coffee dose must be greater than 0.": "Dosis kopi harus lebih besar dari 0.",
+ "Water must be greater than 0.": "Air harus lebih besar dari 0.",
+ "Recipe has no steps.": "Resep belum memiliki langkah.",
+ "Step {n} has no name.": "Langkah {n} belum memiliki nama.",
+ "Step {n}: duration must be greater than 0.": "Langkah {n}: durasi harus lebih besar dari 0.",
+ "Step {n}: target water must be between 0 and {w} g.": "Langkah {n}: target air harus antara 0 dan {w} g.",
+ "Step {n}: target water cannot be lower than the previous step.": "Langkah {n}: target air tidak boleh lebih rendah dari langkah sebelumnya.",
+ "The last step must reach the total water ({w} g).": "Langkah terakhir harus mencapai total air ({w} g).",
+ "Enter a recipe name.": "Masukkan nama resep.",
+ "Recipe name must be 60 characters or fewer.": "Nama resep maksimal 60 karakter.",
+ "Choose a brewing method.": "Pilih metode seduh.",
+ "Choose a grind size.": "Pilih ukuran gilingan.",
+ "Coffee dose must be a number greater than 0 {u}.": "Dosis kopi harus berupa angka lebih besar dari 0 {u}.",
+ "Total water must be a number greater than 0 {u}.": "Total air harus berupa angka lebih besar dari 0 {u}.",
+ "Ratio must be a number above 0 and up to 100 (for example 16 for 1:16).": "Rasio harus berupa angka di atas 0 hingga 100 (misalnya 16 untuk 1:16).",
+ "Temperature must be between 32 and 212 °F.": "Suhu harus antara 32 dan 212 °F.",
+ "Temperature must be between 0 and 100 °C.": "Suhu harus antara 0 dan 100 °C.",
+ "Ratio 1:{r} does not match {d} {u} coffee and {w} {u} water (that is about 1:{x}). Change one of them.": "Rasio 1:{r} tidak sesuai dengan kopi {d} {u} dan air {w} {u} (sekitar 1:{x}). Ubah salah satunya.",
+ "Add at least one step.": "Tambahkan minimal satu langkah.",
+ "Step {n}: enter a step name.": "Langkah {n}: masukkan nama langkah.",
+ "Step {n}: the name must be 60 characters or fewer.": "Langkah {n}: nama maksimal 60 karakter.",
+ "Step {n}: enter the duration in seconds.": "Langkah {n}: masukkan durasi dalam detik.",
+ "Step {n}: duration cannot be negative.": "Langkah {n}: durasi tidak boleh negatif.",
+ "Step {n}: duration must be at least 1 second.": "Langkah {n}: durasi minimal 1 detik.",
+ "Step {n}: use whole seconds for the duration.": "Langkah {n}: gunakan detik bulat untuk durasi.",
+ "Step {n}: duration is too long (3 days maximum).": "Langkah {n}: durasi terlalu panjang (maksimal 3 hari).",
+ "Step {n}: enter the target water as a running total in {u}.": "Langkah {n}: masukkan target air sebagai total berjalan dalam {u}.",
+ "Step {n}: target water cannot be negative.": "Langkah {n}: target air tidak boleh negatif.",
+ "Step {n}: target water ({t} {u}) cannot be more than the total water ({w} {u}).": "Langkah {n}: target air ({t} {u}) tidak boleh melebihi total air ({w} {u}).",
+ "Step {n}: target ({t} {u}) is lower than the previous step ({p} {u}). Targets are running totals, so each step should be the same or higher.": "Langkah {n}: target ({t} {u}) lebih rendah dari langkah sebelumnya ({p} {u}). Target adalah total berjalan, jadi setiap langkah harus sama atau lebih tinggi.",
+ "Step {n}: the instruction must be 200 characters or fewer.": "Langkah {n}: instruksi maksimal 200 karakter.",
+ "The last step must reach the total water ({w} {u}); it currently ends at {l} {u}.": "Langkah terakhir harus mencapai total air ({w} {u}); saat ini berakhir di {l} {u}.",
+ "Saved data could not be read, so defaults were restored.": "Data tersimpan tidak dapat dibaca, sehingga pengaturan default dipulihkan.",
+ "Skipped a saved recipe that was invalid{name}.": "Resep tersimpan yang tidak valid dilewati{name}.",
+ "Skipped a saved recipe that was invalid.": "Resep tersimpan yang tidak valid dilewati."
+}, rules: null };
+const hasKey = (k) => Object.prototype.hasOwnProperty.call(I18N.dict, k);
+const fillVars = (text, v) => (v ? text.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m)) : text);
+function T(key, vars) {
+  return fillVars(I18N.lang === 'id' && hasKey(key) ? I18N.dict[key] : key, vars);
+}
+function buildRules() {
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  I18N.rules = Object.keys(I18N.dict).filter((k) => /\{\w+\}/.test(k)).sort((a, b) => b.length - a.length).map((k) => {
+    const names = [];
+    const src = esc(k).replace(/\\\{(\w+)\\\}/g, (m, n) => { names.push(n); return '(.+?)'; });
+    return { key: k, names, rx: new RegExp('^' + src + '$') };
+  });
+}
+function TM(text) {
+  if (I18N.lang !== 'id' || !text) return text;
+  if (hasKey(text)) return I18N.dict[text];
+  if (!I18N.rules) buildRules();
+  for (const r of I18N.rules) {
+    const m = r.rx.exec(text);
+    if (!m) continue;
+    const vars = {};
+    r.names.forEach((n, i) => { vars[n] = T(m[i + 1]); });
+    return fillVars(I18N.dict[r.key], vars);
+  }
+  return text;
+}
+/* Static HTML: every text node / attribute whose English text is a dictionary key is translated; the original is remembered so English can be restored. */
+const NO_STATIC_TRANSLATE = '#recipe-list,#recent-recipes,#favorite-recipes,#recipe-detail,#timer-steps,#timer-recipe,#timer-step';   // hold user-typed names; always rendered through T()/rn()/sn()
+function translateStatic() {
+  const id = I18N.lang === 'id';
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach((n) => {
+    const p = n.parentNode && n.parentNode.nodeName;
+    if (p === 'SCRIPT' || p === 'STYLE') return;
+    if (n.parentElement && n.parentElement.closest(NO_STATIC_TRANSLATE)) return;
+    const raw = n.nodeValue, trimmed = raw.trim();
+    if (!trimmed) return;
+    const src = n.__en !== undefined ? n.__en : trimmed;
+    if (!hasKey(src)) return;
+    n.__en = src;
+    n.nodeValue = raw.slice(0, raw.indexOf(trimmed)) + (id ? I18N.dict[src] : src) + raw.slice(raw.indexOf(trimmed) + trimmed.length);
+  });
+  document.querySelectorAll('[placeholder],[aria-label],[title]').forEach((el) => {
+    el.__enAttrs = el.__enAttrs || {};
+    ['placeholder', 'aria-label', 'title'].forEach((a) => {
+      if (!el.hasAttribute(a)) return;
+      const src = a in el.__enAttrs ? el.__enAttrs[a] : el.getAttribute(a);
+      if (!hasKey(src)) return;
+      el.__enAttrs[a] = src;
+      el.setAttribute(a, id ? I18N.dict[src] : src);
+    });
+  });
+}
+/* Dropdowns whose option values are English data keys (methods, grind sizes): relabel the visible text only. */
+function relabelSelects() {
+  ['calc-method', 'calc-grind', 'f-method', 'f-grind'].forEach((sid) => {
+    const el = document.getElementById(sid);
+    if (el) Array.from(el.options).forEach((o) => { o.text = T(o.value); });
+  });
+}
+function applyLanguage() { translateStatic(); relabelSelects(); }
+</script>
+<script>
+'use strict';
+/* BREW CALCULATOR - Phase 1 foundation. Data model: step.targetWater is CUMULATIVE total grams. */
+const STORAGE_KEY = 'brewCalculator.v2';
+const LEGACY_KEY = 'brewCalculator.v1';   // Phase 1/2 saved settings, favorites and recent here
+const VIEWS = ['home', 'calculator', 'recipes', 'recipe-detail', 'recipe-form', 'timer', 'settings'];
+const NAV_PARENT = { 'recipe-detail': 'recipes', 'recipe-form': 'recipes' };   // which nav tab stays highlighted
+const { formatTime, formatNumber: fmt, formatRatio, calcFrom, scaleSteps, validateRecipe, normalizeRecipe, createTimerEngine,
+  METHODS, GRINDS, OZ_G, gToOz, cToF, fToC, newId, sanitizeStored, parseRecipeDraft, SCHEMA_VERSION } = BrewLogic;
+
+/* targetWater is the CUMULATIVE total in grams. "{target}" in an instruction is replaced with the (scaled) target. */
+const DEFAULT_RECIPES = [
+  { id: 'v60-classic', name: 'Classic V60', method: 'V60 / Pour Over', dose: 15, water: 240, ratio: 16, temp: 92, grind: 'Medium-fine', estimate: '2:30–3:00',
+    steps: [
+      { name: 'Bloom', duration: 45, targetWater: 45, instruction: 'Slowly pour water up to {target} g total, then wait until the step ends.' },
+      { name: 'First Pour', duration: 45, targetWater: 120, instruction: 'Slowly pour water until the total reaches {target} g.' },
+      { name: 'Second Pour', duration: 30, targetWater: 180, instruction: 'Pour water until the total reaches {target} g.' },
+      { name: 'Final Pour', duration: 60, targetWater: 240, instruction: 'Pour water until the total reaches {target} g, then wait for the drawdown to finish.' }
+    ] },
+  { id: 'french-press-starter', name: 'French Press', method: 'French Press', starter: true, dose: 30, water: 450, ratio: 15, temp: 95, grind: 'Coarse',
+    steps: [
+      { name: 'Pour', duration: 30, targetWater: 450, instruction: 'Pour water up to {target} g total.' },
+      { name: 'Steep', duration: 210, targetWater: 450, instruction: 'Wait, then break the crust of coffee on the surface.' },
+      { name: 'Press', duration: 30, targetWater: 450, instruction: 'Press the plunger slowly, then serve.' }
+    ] },
+  { id: 'aeropress-starter', name: 'Standard AeroPress', method: 'AeroPress', starter: true, dose: 15, water: 225, ratio: 15, temp: 92, grind: 'Medium',
+    steps: [
+      { name: 'Add Water', duration: 20, targetWater: 225, instruction: 'Pour water up to {target} g total, stir, then insert the plunger.' },
+      { name: 'Steep', duration: 70, targetWater: 225, instruction: 'Wait for the brew to finish steeping.' },
+      { name: 'Press', duration: 30, targetWater: 225, instruction: 'Press slowly and steadily.' }
+    ] },
+  { id: 'espresso-starter', name: 'Espresso', method: 'Espresso', starter: true, dose: 18, water: 36, ratio: 2, temp: 93, grind: 'Extra fine',
+    steps: [
+      { name: 'Pre-infusion', duration: 8, targetWater: 6, instruction: 'Wet the coffee with {target} g of water in total.' },
+      { name: 'Extraction', duration: 25, targetWater: 36, instruction: 'Extract until {target} g in total has reached the cup.' }
+    ] },
+  { id: 'cold-brew-starter', name: 'Cold Brew', method: 'Cold Brew', starter: true, dose: 100, water: 1000, ratio: 10, temp: 20, grind: 'Coarse',
+    steps: [
+      { name: 'Add Water', duration: 60, targetWater: 1000, instruction: 'Pour water up to {target} g total and make sure all the coffee is wet.' },
+      { name: 'Steep', duration: 43200, targetWater: 1000, instruction: 'Steep for 12 hours at room temperature or in the fridge.' },
+      { name: 'Filter', duration: 300, targetWater: 1000, instruction: 'Strain the coffee, then store it in the fridge.' }
+    ] },
+  { id: 'custom-starter', name: 'Custom Brew', method: 'Custom', starter: true, dose: 20, water: 320, ratio: 16, temp: 92, grind: 'Medium',
+    steps: [
+      { name: 'Pour', duration: 30, targetWater: 320, instruction: 'Pour water up to {target} g total.' },
+      { name: 'Steep', duration: 150, targetWater: 320, instruction: 'Wait until the timer runs out.' }
+    ] }
+];
+
+/* Built-in recipes live in code, are frozen, and are never written to localStorage, so they can't be damaged or lost. */
+const deepFreeze = (o) => { Object.values(o).forEach((v) => { if (v && typeof v === 'object') deepFreeze(v); }); return Object.freeze(o); };
+const BUILTIN = DEFAULT_RECIPES.map((r) => ({ ...normalizeRecipe(r), builtIn: true })).filter((r) => {
+  const errors = validateRecipe(r);
+  if (errors.length) console.warn('Skipped invalid built-in recipe', r.id, errors);
+  return !errors.length;
+}).map((r) => deepFreeze(r));
+
+const state = {
+  view: 'home',
+  recipes: BUILTIN.slice(),   // built-in + user recipes (see rebuildRecipes)
+  userRecipes: [],
+  filter: 'all',
+  detailId: null,
+  form: null,
+  loadNotice: '',
+  storageOk: null,
+  favorites: [],
+  recent: [],
+  activeRecipeId: null,
+  activeBrew: null,   // working copy used by the timer (may be scaled by the Calculator); never the stored recipe
+  engine: null,
+  brewError: '',
+  stepsKey: '',
+  calc: { method: null, baseId: null, dose: 0, water: 0, ratio: 0, temp: 0, grind: '', lastField: 'dose', valid: true },
+  search: '',
+  settings: { theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+              sound: true, vibrate: true, notify: false, autoAdvance: true, timerMode: 'down', units: 'metric', wakeLock: true, waterMeasure: 'weight', language: 'en' }
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const getRecipe = (id) => state.recipes.find((r) => r.id === id);
+/* Display names: built-in recipes and their steps are translated; recipes the user typed are shown exactly as saved. */
+const rn = (r) => (r.builtIn ? T(r.name) : r.name);
+const sn = (step, r) => (r && r.builtIn ? T(step.name) : step.name);
+const brewErrorText = () => (state.brewError ? (state.brewErrors || []).map(TM).join(' ') : '');
+
+/* ---------- Persistence ---------- */
+/* null = unreadable, undefined = nothing stored */
+function readStored(key) {
+  try {
+    const text = localStorage.getItem(key);
+    return text === null ? undefined : JSON.parse(text);
+  } catch (e) { return null; }
+}
+function loadState() {
+  let raw = readStored(STORAGE_KEY), migrated = false;
+  if (raw === undefined) { raw = readStored(LEGACY_KEY); migrated = raw !== undefined && raw !== null; }
+  const { data, warnings } = sanitizeStored(raw, BUILTIN.map((r) => r.id));
+  Object.assign(state.settings, data.settings);
+  I18N.lang = state.settings.language;
+  state.favorites = data.favorites;
+  state.userRecipes = data.userRecipes;
+  state.recent = data.recent;
+  state.activeRecipeId = data.lastRecipeId;
+  rebuildRecipes();
+  if (warnings.length) state.loadNotice = TM(warnings[0]) + (warnings.length > 1 ? T(' (+{n} more)', { n: warnings.length - 1 }) : '');
+  if (migrated || warnings.length) saveState();
+}
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: SCHEMA_VERSION, settings: state.settings, favorites: state.favorites,
+      userRecipes: state.userRecipes, recent: state.recent, lastRecipeId: state.activeRecipeId }));
+    state.storageOk = true;
+  } catch (e) {
+    if (state.storageOk !== false) showToast(T('This browser is not letting the app save data. Changes will be lost when you close the page.'));
+    state.storageOk = false;
+  }
+}
+
+/* ---------- Navigation ---------- */
+function navigate(view) {
+  if (!VIEWS.includes(view)) view = 'home';
+  if (view === 'recipe-form' && !state.form) view = 'recipes';
+  if (view === 'recipe-detail' && !getRecipe(state.detailId)) view = 'recipes';
+  if (view !== 'recipe-form') state.form = null;
+  state.view = view;
+  const navView = NAV_PARENT[view] || view;
+  document.querySelectorAll('.view').forEach((el) => { el.hidden = el.dataset.viewName !== view; });
+  document.querySelectorAll('.nav button').forEach((b) => {
+    if (b.dataset.view === navView) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  try { if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view); } catch (e) { /* URL update is optional */ }
+  window.scrollTo(0, 0);
+  render();
+}
+
+/* ---------- Recipe actions ---------- */
+function pushRecent(id) {
+  state.recent = [id, ...state.recent.filter((r) => r !== id)].slice(0, 5);
+  saveState();
+}
+function selectRecipeForBrewing(id) {
+  const r = getRecipe(id);
+  if (!r) return;
+  const live = state.activeBrew && state.activeBrew.id === id && state.engine && ['running', 'paused'].includes(state.engine.status);
+  if (!live) {
+    if (!canReplaceBrew()) return;
+    loadBrew(normalizeRecipe(r));
+  }
+  state.activeRecipeId = id;
+  pushRecent(id);
+  navigate('timer');
+}
+
+/* ---------- Rendering ---------- */
+function renderCalculator() {
+  renderCalcResult();
+}
+function renderTimer() {
+  if (state.engine) timerTick(); else paintTimerEmpty();
+}
+function applySettings() {
+  const s = state.settings;
+  I18N.lang = s.language;
+  document.documentElement.lang = s.language;
+  $('set-language').value = s.language;
+  document.documentElement.dataset.theme = s.theme;
+  const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = s.theme === 'dark' ? '#201b18' : '#70472f';
+  $('set-theme').checked = s.theme === 'dark';
+  $('set-sound').checked = s.sound;
+  $('set-autoadvance').checked = s.autoAdvance;
+  $('set-timermode').value = s.timerMode;
+  $('set-units').value = s.units;
+  $('set-watermeasure').value = s.waterMeasure;
+  $('set-watermeasure').disabled = s.units === 'imperial';
+  $('set-wakelock').checked = s.wakeLock;
+  syncAlertControls();
+  if (!('wakeLock' in navigator)) { $('set-wakelock').disabled = true; $('wakelock-note').hidden = false; }
+  $('units-note').textContent = isImperial()
+    ? T('Imperial: ounces by weight (1 oz = 28.3495 g) and °F. Recipes keep their original values; only the display changes.')
+    : s.waterMeasure === 'volume'
+      ? T('Metric with water in ml. ml assumes water is about 1 g per ml, which is only an approximation. Grams are more accurate.')
+      : T('Metric: grams and °C. Weighing water in grams is the most accurate way to brew.');
+  applyUnitLabels();
+  applyLanguage();
+}
+function render() {
+  if (state.view === 'home') renderHome();
+  if (state.view === 'calculator') renderCalculator();
+  if (state.view === 'recipes') renderRecipes();
+  if (state.view === 'recipe-detail') renderDetail();
+  if (state.view === 'timer') renderTimer();
+}
+
+/* ---------- Units & feedback (Phase 3). Internal values are ALWAYS grams and °C; conversion happens only for display/input. ---------- */
+const isImperial = () => state.settings.units === 'imperial';
+function wtUnit(kind) { return isImperial() ? 'oz' : (kind === 'water' && state.settings.waterMeasure === 'volume' ? 'ml' : 'g'); }
+function wtNum(g, dp) { return fmt(isImperial() ? gToOz(g) : g, dp || (isImperial() ? 3 : 2)); }
+function wt(g, kind) { return `${fmt(isImperial() ? gToOz(g) : g, 2)} ${wtUnit(kind)}`; }
+const tempUnit = () => (isImperial() ? '°F' : '°C');
+const tempNum = (c) => fmt(isImperial() ? cToF(c) : c, 1);
+const tempText = (c) => `${tempNum(c)} ${tempUnit()}`;
+function toGramsRaw(s) {   // display-unit input string -> grams (strings that are not numbers pass through so validation can report them)
+  if (!isImperial()) return s;
+  const n = Number(String(s).trim().replace(',', '.'));
+  return String(s).trim() !== '' && Number.isFinite(n) ? n * OZ_G : s;
+}
+function tempFromInput(s) {
+  const t = String(s).trim(), n = Number(t.replace(',', '.'));
+  if (t === '' || !Number.isFinite(n)) return NaN;
+  return isImperial() ? fToC(n) : n;
+}
+function derive(last, raws) { return calcFrom(last, { dose: toGramsRaw(raws.dose), water: toGramsRaw(raws.water), ratio: raws.ratio }); }
+function applyUnitLabels() {
+  [['.u-wt', wtUnit('coffee')], ['.u-water', wtUnit('water')], ['.u-temp', tempUnit()]].forEach(([sel, txt]) => {
+    document.querySelectorAll(sel).forEach((el) => { el.textContent = txt; });
+  });
+}
+function volumeNote() { return !isImperial() && state.settings.waterMeasure === 'volume' ? T('Water in ml assumes about 1 g per ml, which is an approximation.') : ''; }
+function instructionText(step) {
+  const text = T(String(step.instruction || '')).replace(/\{target\}( g)?/g, wt(step.targetWater, 'water'));
+  return text || T('Pour to {amount} total.', { amount: wt(step.targetWater, 'water') });
+}
+let toastTimer = null;
+function showToast(msg) {
+  const el = $('toast');
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 3500);
+}
+
+/* ---------- Calculator ---------- */
+const CALC_INPUT_IDS = { dose: 'calc-dose', water: 'calc-water', ratio: 'calc-ratio', temp: 'calc-temp' };
+const recipesForMethod = (m) => state.recipes.filter((r) => r.method === m);
+
+function initCalculator() {
+  METHODS.forEach((m) => $('calc-method').add(new Option(T(m), m)));
+  GRINDS.forEach((g) => $('calc-grind').add(new Option(T(g), g)));
+  applyCalcDefaults(getRecipe(state.activeRecipeId) || state.recipes[0]);
+}
+function fillRecipeSelect(method, selectedId) {
+  const sel = $('calc-recipe');
+  sel.innerHTML = '';
+  recipesForMethod(method).forEach((r) => sel.add(new Option(rn(r), r.id)));
+  sel.value = selectedId;
+}
+/* Loads a recipe's values into the Calculator. The stored recipe is never changed by what the user types afterwards. */
+function applyCalcDefaults(recipe) {
+  recipe = recipe || state.recipes[0];
+  Object.assign(state.calc, { method: recipe.method, baseId: recipe.id, dose: recipe.dose, water: recipe.water, ratio: recipe.ratio,
+    temp: recipe.temp, grind: recipe.grind, lastField: 'dose', valid: true });
+  $('calc-method').value = recipe.method;
+  fillRecipeSelect(recipe.method, recipe.id);
+  writeCalcInputs();
+  setCalcError(null);
+  renderCalcResult();
+}
+function writeCalcInputs() {   // always formatted from the internal grams / °C
+  const c = state.calc;
+  $('calc-dose').value = wtNum(c.dose);
+  $('calc-water').value = wtNum(c.water);
+  $('calc-ratio').value = fmt(c.ratio);
+  $('calc-temp').value = tempNum(c.temp);
+  $('calc-grind').value = c.grind;
+}
+function setCalcError(message, field) {
+  const el = $('calc-error');
+  el.textContent = TM(message || '');
+  el.hidden = !message;
+  Object.entries(CALC_INPUT_IDS).forEach(([key, id]) => {
+    if (message && key === field) $(id).setAttribute('aria-invalid', 'true'); else $(id).removeAttribute('aria-invalid');
+  });
+}
+/* Only the DERIVED field is written back, never the one being typed in, so there are no circular updates. */
+function onCalcInput(field) {
+  const c = state.calc, triplet = ['dose', 'water', 'ratio'].includes(field);
+  if (triplet) c.lastField = field;
+  const res = derive(c.lastField, { dose: $('calc-dose').value, water: $('calc-water').value, ratio: $('calc-ratio').value });
+  let error = null, bad = null;
+  if (res.ok) {
+    if (triplet) {   // temperature / grind edits only validate; re-deriving from rounded display values would drift dose and water (visible in oz)
+      Object.assign(c, { dose: res.dose, water: res.water, ratio: res.ratio });
+      if (c.lastField === 'water') $('calc-dose').value = wtNum(res.dose); else $('calc-water').value = wtNum(res.water);
+    }
+  } else { error = res.error; bad = res.field; }
+  const t = tempFromInput($('calc-temp').value);
+  if (!error && !(t >= 0 && t <= 100)) { error = 'Temperature must be between 0 and 100 °C (32 to 212 °F).'; bad = 'temp'; }
+  else if (!error) c.temp = t;
+  c.grind = $('calc-grind').value;
+  c.valid = !error;
+  setCalcError(error, bad);
+  renderCalcResult();
+}
+function stepRowsHTML(steps, r) {
+  let prev = 0;
+  return steps.map((s) => {
+    const add = s.targetWater - prev;
+    prev = s.targetWater;
+    return `<li><span>${esc(sn(s, r))} · ${formatTime(s.duration)}</span><span class="muted">total ${wt(s.targetWater, 'water')} (+${wt(add, 'water')})</span></li>`;
+  }).join('');
+}
+const TYPICAL_RATIO = { 'V60 / Pour Over': [14, 18], 'French Press': [12, 17], 'AeroPress': [10, 17], 'Espresso': [1.5, 3], 'Cold Brew': [4, 12] };
+function ratioHint(method, ratio) {   // soft, non-blocking guidance
+  const t = TYPICAL_RATIO[method];
+  if (!t || (ratio >= t[0] && ratio <= t[1])) return '';
+  return `<p class="note">${T('Heads up: {ratio} is outside the usual 1:{lo}–1:{hi} for {method}. Expect a {dir} cup.', { ratio: formatRatio(ratio), lo: t[0], hi: t[1], method: esc(T(method)), dir: T(ratio > t[1] ? 'weaker' : 'stronger') })}</p>`;
+}
+function renderCalcResult() {
+  const c = state.calc, el = $('calc-result');
+  $('btn-calc-to-brew').disabled = !c.valid;
+  if (!c.valid) { el.innerHTML = `<p class="muted">${T('Fix the highlighted input to see your recipe.')}</p>`; return; }
+  const base = getRecipe(c.baseId);
+  const steps = scaleSteps(base.steps, base.water, c.water);
+  const total = steps.reduce((sum, s) => sum + s.duration, 0);
+  el.innerHTML = `<h3>${T('{dose} coffee + {water} water', { dose: wt(c.dose, 'coffee'), water: wt(c.water, 'water') })}</h3>
+    <p>${T('Ratio {ratio} · {temp} · {grind}', { ratio: formatRatio(c.ratio), temp: tempText(c.temp), grind: esc(T(c.grind)) })}</p>
+    <p class="muted small">${esc(rn(base))} · ${T('Timer')} ${formatTime(total)}${base.estimate ? ' · ' + T('Estimated brew time') + ' ' + esc(base.estimate) : ''}${base.builtIn ? ' · ' + T('Built-in recipe') : ''}</p>
+    ${ratioHint(base.method, c.ratio)}<ol class="steps">${stepRowsHTML(steps, base)}</ol>${volumeNote() ? `<p class="muted small">${volumeNote()}</p>` : ''}`;
+}
+function buildCalcBrew() {   // session copy: scaled targets, original recipe untouched
+  const c = state.calc, base = getRecipe(c.baseId), r = normalizeRecipe(base);
+  r.steps = scaleSteps(r.steps, base.water, c.water);
+  Object.assign(r, { dose: c.dose, water: c.water, ratio: c.ratio, temp: c.temp, grind: c.grind });
+  return r;
+}
+function bindCalculatorEvents() {
+  Object.keys(CALC_INPUT_IDS).forEach((f) => $(CALC_INPUT_IDS[f]).addEventListener('input', () => onCalcInput(f)));
+  $('calc-grind').addEventListener('change', () => onCalcInput('grind'));
+  $('calc-method').addEventListener('change', (e) => applyCalcDefaults(recipesForMethod(e.target.value)[0]));
+  $('calc-recipe').addEventListener('change', (e) => applyCalcDefaults(getRecipe(e.target.value)));
+  $('btn-calc-to-brew').addEventListener('click', () => {
+    if (!state.calc.valid || !canReplaceBrew()) return;
+    loadBrew(buildCalcBrew());
+    state.activeRecipeId = state.calc.baseId;
+    pushRecent(state.calc.baseId);
+    navigate('timer');
+  });
+}
+
+/* ---------- Timer controller (Phase 2) ---------- */
+let tickerId = null;   // the ONE interval; used only to refresh the UI
+let audioCtx = null;
+let wakeLock = null;
+let wakeLockPending = false;
+
+function canReplaceBrew() {
+  const s = state.engine && state.engine.status;
+  return !(s === 'running' || s === 'paused') || window.confirm(T('A brew is in progress. Replace it with this recipe?'));
+}
+/* Wall clock that never runs backwards. performance.now() can stop while a phone sleeps or the screen locks, which would make the timer fall behind. */
+const timerNow = (() => { let last = 0; return () => { last = Math.max(last, Date.now()); return last; }; })();
+function loadBrew(recipe) {
+  stopTicker(); releaseWakeLock();
+  state.stepsKey = '';
+  const errors = validateRecipe(recipe);
+  state.brewError = errors.join(' ');
+  state.brewErrors = errors;
+  if (errors.length) { state.activeBrew = null; state.engine = null; return; }
+  state.activeBrew = recipe;
+  state.engine = createTimerEngine(recipe.steps, { now: timerNow, isAutoAdvance: () => state.settings.autoAdvance });
+}
+let tickWorker = null;   // a Worker keeps ticking at full rate while the tab is in the background; falls back to setInterval
+function startTicker() {
+  stopTicker();
+  try {
+    const url = URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},250)'], { type: 'text/javascript' }));
+    tickWorker = new Worker(url); URL.revokeObjectURL(url);
+    tickWorker.onmessage = timerTick;
+  } catch (e) { tickWorker = null; tickerId = setInterval(timerTick, 200); }
+}
+function stopTicker() {
+  if (tickWorker) { tickWorker.terminate(); tickWorker = null; }
+  if (tickerId !== null) { clearInterval(tickerId); tickerId = null; }
+}
+function timerTick() { if (state.engine) handleSnapshot(state.engine.update()); }
+function timerAction(name) {
+  const eng = state.engine;
+  if (!eng) return;
+  ensureAudio();
+  const snap = eng[name]();
+  if (name === 'start' || name === 'resume') { if (eng.status === 'running') { startTicker(); acquireWakeLock(); } }
+  if (name === 'pause' || name === 'reset') { stopTicker(); releaseWakeLock(); }
+  handleSnapshot(snap);
+}
+function handleSnapshot(snap) {
+  if (snap.events.includes('complete')) { stopTicker(); releaseWakeLock(); beep(3, 988); alertUser('complete', snap); }
+  else if (snap.events.includes('step')) { beep(1, 880); alertUser('step', snap); }
+  else if (snap.events.includes('stepEnd')) { beep(2, 880); alertUser('stepEnd', snap); }
+  paintTimer(snap);
+}
+/* ---------- Vibration and notifications (best effort: they only fire while the page is alive) ---------- */
+const VIBRATE_PATTERNS = { step: [200], stepEnd: [200, 100, 200], complete: [400, 150, 400, 150, 400] };
+function vibrate(pattern) { try { if (state.settings.vibrate && navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* optional */ } }
+const canNotify = () => 'Notification' in window;
+function syncAlertControls() {
+  const s = state.settings, v = $('set-vibrate'), n = $('set-notify'), granted = canNotify() && Notification.permission === 'granted';
+  v.checked = s.vibrate; n.checked = s.notify && granted;
+  const noVibrate = !navigator.vibrate;
+  v.disabled = noVibrate; $('vibrate-note').hidden = !noVibrate;
+  n.disabled = !canNotify() || Notification.permission === 'denied';
+  $('notify-note').textContent = !canNotify() ? T('Notifications are not supported on this browser.')
+    : Notification.permission === 'denied' ? T('Notifications are blocked. Allow them in the browser or site settings to use this.')
+    : T('Alerts are sent only while the timer is running in the background. If the phone locks or the browser closes the page, the timer can pause and no alert will arrive.');
+}
+async function onNotifyToggle(e) {
+  let on = e.target.checked;
+  if (on && canNotify() && Notification.permission !== 'granted') {
+    try { on = (await Notification.requestPermission()) === 'granted'; } catch (err) { on = false; }
+  }
+  state.settings.notify = on; saveState(); syncAlertControls();
+}
+async function showAlert(title, body) {
+  const opts = { body, tag: 'brew-timer', renotify: true, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', vibrate: state.settings.vibrate ? [200, 100, 200] : [] };
+  try {
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    if (reg) await reg.showNotification(title, opts); else new Notification(title, opts);
+  } catch (e) { /* optional */ }
+}
+function alertUser(kind, snap) {
+  vibrate(VIBRATE_PATTERNS[kind]);
+  const r = state.activeBrew;
+  if (!r || !state.settings.notify || !canNotify() || Notification.permission !== 'granted' || document.visibilityState === 'visible') return;
+  const step = r.steps[snap.index];
+  if (kind === 'complete') showAlert(T('Brew complete'), T('{name} is ready.', { name: rn(r) }));
+  else if (kind === 'stepEnd') showAlert(T('Step finished: {name}', { name: sn(step, r) }), T('Open the timer to continue.'));
+  else showAlert(sn(step, r), instructionText(step));
+}
+function setTimerButtons(st) {
+  $('btn-start').disabled = st !== 'idle';
+  $('btn-pause').disabled = st !== 'running';
+  $('btn-resume').disabled = st !== 'paused';
+  $('btn-reset').disabled = st === 'idle';
+  $('btn-skip').disabled = !(st === 'running' || st === 'paused');
+}
+function paintTimerEmpty() {
+  $('timer-live').hidden = false; $('timer-complete').hidden = true;
+  $('timer-recipe').textContent = T('No recipe selected');
+  $('timer-method').textContent = T('No method');
+  $('timer-display').textContent = '00:00';
+  $('timer-step').textContent = T('Ready');
+  $('timer-pour').textContent = T('Pour to 0 {unit}', { unit: wtUnit('water') });
+  $('timer-target').textContent = `0 ${wtUnit('water')}`;
+  $('timer-overall-text').textContent = '00:00 / 00:00';
+  $('timer-instruction').textContent = brewErrorText() || T('Choose a recipe to see its steps.');
+  $('timer-next').textContent = '';
+  $('timer-status').textContent = '';
+  $('timer-unit-note').hidden = true;
+  $('timer-step-progress').style.width = '0';
+  $('timer-progress').style.width = '0';
+  $('timer-steps').innerHTML = `<li class="empty">${T('Pick a recipe from Recipes and tap Brew, or use the Calculator.')}</li>`;
+  state.stepsKey = '';
+  setTimerButtons('none');
+}
+function paintTimer(snap) {
+  const r = state.activeBrew, st = snap.status, i = snap.index, s = r.steps[i], next = r.steps[i + 1];
+  const complete = st === 'complete';
+  $('timer-live').hidden = complete;
+  $('long-hint').hidden = complete || snap.totalMs < 1800000;
+  $('timer-complete').hidden = !complete;
+  const secs = state.settings.timerMode === 'down'
+    ? Math.ceil((snap.stepDurationMs - snap.stepElapsedMs) / 1000)
+    : Math.floor(snap.stepElapsedMs / 1000);
+  $('timer-recipe').textContent = rn(r);
+  $('timer-method').textContent = T(r.method);
+  $('timer-display').textContent = formatTime(secs);
+  $('timer-display').className = $('timer-display').textContent.length > 5 ? 'timer-display long' : 'timer-display';   // hours format needs a smaller font
+  $('timer-step').textContent = sn(s, r);
+  $('timer-pour').textContent = T(r.method === 'Espresso' ? 'Extract to {amount} yield · step {i} of {n}' : 'Pour to {amount} · step {i} of {n}', { amount: wt(s.targetWater, 'water'), i: i + 1, n: r.steps.length });
+  $('timer-target').textContent = wt(s.targetWater, 'water');
+  $('timer-instruction').textContent = instructionText(s);
+  $('timer-next').textContent = next ? T('Next: {name} · target total {target}', { name: sn(next, r), target: wt(next.targetWater, 'water') }) : T('Last step');
+  $('timer-step-progress').style.width = (snap.stepElapsedMs / snap.stepDurationMs * 100).toFixed(1) + '%';
+  $('timer-progress').style.width = (snap.overallMs / snap.totalMs * 100).toFixed(1) + '%';
+  $('timer-overall-text').textContent = `${formatTime(Math.floor(snap.overallMs / 1000))} / ${formatTime(snap.totalMs / 1000)}`;
+  $('timer-unit-note').textContent = volumeNote();
+  $('timer-unit-note').hidden = !volumeNote();
+  $('timer-status').textContent = snap.waiting ? T('Step finished. Tap Skip for the next step.')
+    : { idle: T('Ready. Tap Start when you begin pouring.'), running: T('Brewing'), paused: T('Paused') }[st] || '';
+  setTimerButtons(st);
+  if (complete) paintComplete(r, snap);
+  const key = `${i}|${complete}|${state.settings.units}|${state.settings.waterMeasure}|${I18N.lang}`;
+  if (key !== state.stepsKey) {
+    state.stepsKey = key;
+    let prev = 0;
+    $('timer-steps').innerHTML = r.steps.map((x, k) => {
+      const add = x.targetWater - prev;
+      prev = x.targetWater;
+      const cls = complete || k < i ? 'done' : k === i ? 'active' : 'upcoming';
+      return `<li class="${cls}"><span>${esc(sn(x, r))}</span><span class="muted">${formatTime(x.duration)} · total ${wt(x.targetWater, 'water')} (+${wt(add, 'water')})</span></li>`;
+    }).join('');
+  }
+}
+function paintComplete(r, snap) {
+  const rows = [[T('Coffee Dose'), wt(r.dose, 'coffee')], [T('Water'), wt(r.water, 'water')], [T('Ratio'), formatRatio(r.ratio)],
+                [T('Temperature'), tempText(r.temp)], [T('Grind Size'), esc(T(r.grind))], [T('Total Brew Time'), formatTime(snap.totalMs / 1000)]];
+  $('complete-summary').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+}
+function bindTimerEvents() {
+  ['start', 'pause', 'resume', 'reset', 'skip'].forEach((n) => $('btn-' + n).addEventListener('click', () => timerAction(n)));
+  $('btn-brew-again').addEventListener('click', () => timerAction('reset'));
+  $('btn-back-home').addEventListener('click', () => { timerAction('reset'); navigate('home'); });
+  $('btn-back-recipes').addEventListener('click', () => { timerAction('reset'); navigate('recipes'); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    timerTick();   // recompute from timestamps after the tab was hidden
+    if (state.engine && state.engine.status === 'running') acquireWakeLock();
+  });
+}
+function onSettingChanged(key) {
+  if (key === 'units' || key === 'waterMeasure') { writeCalcInputs(); state.calc.valid = true; setCalcError(null); renderCalcResult(); render(); }   // re-format from internal values
+  if (key === 'language') { state.stepsKey = ''; fillRecipeSelect(state.calc.method, state.calc.baseId); render(); }
+  if (key === 'sound') ensureAudio().then(() => beep(1, 660));
+  if (key === 'vibrate') vibrate(200);
+  if (key === 'wakeLock') {
+    if (!state.settings.wakeLock) releaseWakeLock();
+    else if (state.engine && state.engine.status === 'running') acquireWakeLock();
+  }
+  timerTick();   // re-paint for Countdown / Count up and Auto Advance changes
+}
+
+/* ---------- Sound: AudioContext is created/resumed only from user gestures (autoplay policy) ---------- */
+function ensureAudio() {
+  if (!state.settings.sound) return Promise.resolve();
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return Promise.resolve();
+    audioCtx = audioCtx || new AC();
+    return audioCtx.state === 'suspended' ? audioCtx.resume().catch(() => {}) : Promise.resolve();
+  } catch (e) { return Promise.resolve(); }
+}
+function beep(times, freq) {
+  if (!state.settings.sound || !audioCtx || audioCtx.state !== 'running') return;
+  try {
+    for (let k = 0; k < times; k++) {
+      const t = audioCtx.currentTime + k * 0.25, o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + 0.22);
+    }
+  } catch (e) { /* audio is optional */ }
+}
+
+/* ---------- Screen Wake Lock (optional; needs a supporting browser and HTTPS/localhost) ---------- */
+async function acquireWakeLock() {
+  if (!state.settings.wakeLock || !('wakeLock' in navigator) || wakeLock || wakeLockPending) return;
+  wakeLockPending = true;
+  try {
+    const lock = await navigator.wakeLock.request('screen');
+    if (!state.settings.wakeLock || !state.engine || state.engine.status !== 'running') { lock.release().catch(() => {}); return; }   // brew paused/reset while the request was pending
+    wakeLock = lock;
+    lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
+  } catch (e) { wakeLock = null; } finally { wakeLockPending = false; }
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+}
+
+/* ---------- Events ---------- */
+function bindEvents() {
+  document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => navigate(b.dataset.view)));
+  $('btn-home-calculate').addEventListener('click', () => navigate('calculator'));
+  $('btn-home-brew').addEventListener('click', () => {
+    if (state.activeBrew) navigate('timer');
+    else selectRecipeForBrewing(state.activeRecipeId || state.recent[0] || state.recipes[0].id);
+  });
+  $('btn-home-recipes').addEventListener('click', () => navigate('recipes'));
+  bindCalculatorEvents();
+  bindTimerEvents();
+  bindRecipeEvents();
+  const set = (key, id, read) => $(id).addEventListener('change', (e) => {
+    state.settings[key] = read(e.target); saveState(); applySettings(); onSettingChanged(key);
+  });
+  set('theme', 'set-theme', (el) => (el.checked ? 'dark' : 'light'));
+  set('sound', 'set-sound', (el) => el.checked);
+  set('autoAdvance', 'set-autoadvance', (el) => el.checked);
+  set('timerMode', 'set-timermode', (el) => el.value);
+  set('units', 'set-units', (el) => el.value);
+  set('wakeLock', 'set-wakelock', (el) => el.checked);
+  set('vibrate', 'set-vibrate', (el) => el.checked);
+  $('set-notify').addEventListener('change', onNotifyToggle);
+  set('waterMeasure', 'set-watermeasure', (el) => el.value);
+  set('language', 'set-language', (el) => el.value);
+  window.addEventListener('hashchange', () => navigate(location.hash.slice(1)));
+}
+
+function init() {
+  loadState();
+  applySettings();
+  initCalculator();
+  initRecipeForm();
+  bindEvents();
+  if (!state.activeBrew) { const r0 = getRecipe(state.activeRecipeId) || state.recipes[0]; if (r0) loadBrew(normalizeRecipe(r0)); }   // Timer tab is ready to start straight away
+  navigate(location.hash.slice(1) || 'home');
+  if (state.loadNotice) showToast(state.loadNotice);
+}
+document.addEventListener('DOMContentLoaded', init);
+
+</script>
+<script>
+'use strict';
+/* BREW CALCULATOR - Phase 3: Recipe Manager (list, filters, detail, create/edit form, delete). Loaded after app.js.
+   Built-in recipes (BUILTIN) are frozen and never edited in place: "editing" one opens a copy that is saved as the user's own recipe. */
+const FILTERS = [{ id: 'all', label: 'All Recipes' }, { id: 'favorites', label: 'Favorites' }, ...METHODS.map((m) => ({ id: m, label: m }))];
+const FORM_FIELD_IDS = { name: 'f-name', method: 'f-method', dose: 'f-dose', water: 'f-water', ratio: 'f-ratio', temp: 'f-temp', grind: 'f-grind' };
+let confirmResolver = null;
+
+const isFavorite = (id) => state.favorites.includes(id);
+const timerTotal = (r) => r.steps.reduce((sum, s) => sum + s.duration, 0);
+function rebuildRecipes() { state.recipes = [...BUILTIN, ...state.userRecipes]; }
+
+/* ---------- Favorites ---------- */
+function toggleFavorite(id) {
+  if (!getRecipe(id)) return;
+  const i = state.favorites.indexOf(id);
+  if (i >= 0) state.favorites.splice(i, 1); else state.favorites.push(id);
+  saveState();
+  render();
+}
+
+/* ---------- List rendering ---------- */
+function recipeItemHTML(r) {
+  const fav = isFavorite(r.id), id = esc(r.id);
+  return `<article class="item">
+    <div class="item-main">
+      <button class="link" data-action="open" data-id="${id}"><span class="item-title">${esc(rn(r))}</span></button>
+      <span class="muted small">${esc(T(r.method))} · ${wt(r.dose, 'coffee')} : ${wt(r.water, 'water')} · ${formatRatio(r.ratio)} · ${formatTime(timerTotal(r))}</span>
+      <span class="badge">${r.builtIn ? T('Built-in') : T('Mine')}</span>
+    </div>
+    <div class="item-actions">
+      <button class="btn" data-action="favorite" data-id="${id}" aria-pressed="${fav}" aria-label="${fav ? T('Remove from favorites') : T('Add to favorites')}">${fav ? '★' : '☆'}</button>
+      <button class="btn primary" data-action="brew" data-id="${id}">${T('Brew')}</button>
+    </div></article>`;
+}
+function renderList(el, recipes, empty) {
+  if (recipes.length) el.innerHTML = recipes.map(recipeItemHTML).join('');
+  else el.innerHTML = typeof empty === 'string' ? `<p class="empty">${esc(T(empty))}</p>` : empty.html;
+}
+function renderHome() {
+  renderList($('recent-recipes'), state.recent.map(getRecipe).filter(Boolean), 'No recent recipes yet. Start a brew and it shows up here.');
+  renderList($('favorite-recipes'), state.favorites.map(getRecipe).filter(Boolean), 'No favorites yet. Tap ☆ on a recipe to save it.');
+}
+function filteredRecipes() {
+  const q = state.search.trim().toLowerCase(), f = state.filter;
+  return state.recipes.filter((r) => {
+    if (f === 'favorites' && !isFavorite(r.id)) return false;
+    if (f !== 'all' && f !== 'favorites' && r.method !== f) return false;
+    return !q || (r.name + ' ' + r.method).toLowerCase().includes(q);
+  });
+}
+function emptyRecipesHTML() {
+  const q = state.search.trim(), f = FILTERS.find((x) => x.id === state.filter) || FILTERS[0];
+  let msg;
+  if (q) msg = T('No recipes match “{q}”{in}. Try another word or clear the search.', { q: esc(q), in: state.filter !== 'all' ? T(' in {label}', { label: esc(T(f.label)) }) : '' });
+  else if (state.filter === 'favorites') msg = T('You have no favorites yet. Tap ☆ on any recipe to keep it here.');
+  else msg = T('There are no {label} recipes yet. You can create one.', { label: esc(T(f.label)) });
+  return `<div class="card"><p>${msg}</p><div class="actions">
+    <button class="btn" data-action="clear-filters">${T('Clear search and filters')}</button>
+    <button class="btn primary" data-action="new">${T('Create Recipe')}</button></div></div>`;
+}
+function renderRecipes() {
+  $('recipe-filters').innerHTML = FILTERS.map((f) =>
+    `<button class="chip" data-action="filter" data-filter="${esc(f.id)}" aria-pressed="${state.filter === f.id}">${esc(T(f.label))}</button>`).join('');
+  renderList($('recipe-list'), filteredRecipes(), { html: emptyRecipesHTML() });
+}
+
+/* ---------- Detail ---------- */
+function openDetail(id) {
+  if (!getRecipe(id)) { showToast(T('That recipe no longer exists.')); return; }
+  state.detailId = id;
+  state.activeRecipeId = id;   // remembered as the last selected recipe
+  saveState();
+  navigate('recipe-detail');
+}
+function renderDetail() {
+  const r = getRecipe(state.detailId);
+  if (!r) { navigate('recipes'); return; }
+  const id = esc(r.id), fav = isFavorite(r.id);
+  let prev = 0;
+  const steps = r.steps.map((s) => {
+    const add = s.targetWater - prev;
+    prev = s.targetWater;
+    return `<li class="step-detail"><div class="step-top"><strong>${esc(sn(s, r))}</strong><span class="muted">${formatTime(s.duration)} · total ${wt(s.targetWater, 'water')} (+${wt(add, 'water')})</span></div>
+      <p class="muted small">${esc(instructionText(s))}</p></li>`;
+  }).join('');
+  const rows = [[T('Method'), esc(T(r.method))], [T('Coffee Dose'), wt(r.dose, 'coffee')], [T('Total Water'), wt(r.water, 'water')], [T('Ratio'), formatRatio(r.ratio)],
+    [T('Temperature'), tempText(r.temp)], [T('Grind Size'), esc(T(r.grind))], [T('Estimated Time'), r.estimate ? esc(r.estimate) : T('Not set')], [T('Timer Total'), formatTime(timerTotal(r))]];
+  $('recipe-detail').innerHTML = `
+    <div class="title-row"><h2>${esc(rn(r))}</h2><span class="badge">${r.builtIn ? T('Built-in') : T('Mine')}</span></div>
+    <dl class="summary card">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    ${volumeNote() ? `<p class="muted small">${volumeNote()}</p>` : ''}
+    <h3>${T('Steps')}</h3><ol class="steps">${steps}</ol>
+    <div class="actions">
+      <button class="btn primary" data-action="brew" data-id="${id}">${T('Brew')}</button>
+      <button class="btn" data-action="calc" data-id="${id}">${T('Adjust in Calculator')}</button>
+      <button class="btn" data-action="favorite" data-id="${id}" aria-pressed="${fav}">${fav ? T('★ Favorite') : T('☆ Add to favorites')}</button>
+    </div>
+    <div class="actions">
+      <button class="btn" data-action="edit" data-id="${id}">${r.builtIn ? T('Edit as my copy') : T('Edit')}</button>
+      <button class="btn" data-action="duplicate" data-id="${id}">${T('Duplicate')}</button>
+      ${r.builtIn ? '' : `<button class="btn" data-action="delete" data-id="${id}">${T('Delete')}</button>`}
+    </div>
+    ${r.builtIn ? `<p class="muted small">${T('Built-in recipes cannot be changed or deleted. Editing creates your own copy and the original stays as it is.')}</p>` : ''}`;
+}
+
+/* ---------- Create / edit form ---------- */
+function initRecipeForm() {
+  METHODS.forEach((m) => $('f-method').add(new Option(T(m), m)));
+  GRINDS.forEach((g) => $('f-grind').add(new Option(T(g), g)));
+}
+const BLANK_RECIPE = { name: '', method: METHODS[0], dose: 15, water: 240, ratio: 16, temp: 92, grind: 'Medium-fine', estimate: '',
+  steps: [{ name: 'Pour', duration: 30, targetWater: 240, instruction: 'Pour water up to {target} g total.' }] };
+
+/* mode: 'new' | 'edit' (user recipes only) | 'copy' (any recipe; saved as a NEW user recipe) */
+function openRecipeForm(mode, id) {
+  const src = id ? getRecipe(id) : null;
+  if (mode !== 'new' && !src) { showToast(T('That recipe no longer exists.')); return; }
+  if (mode === 'edit' && src.builtIn) mode = 'copy';
+  const base = src || BLANK_RECIPE;
+  const tr = mode === 'new' || !!(src && src.builtIn);   // new recipes and copies of built-ins start in the current language
+  state.form = {
+    mode, id: mode === 'edit' ? id : null, lastField: 'dose', marked: [],
+    basedOn: mode === 'copy' ? id : (src && src.basedOn) || null,
+    steps: base.steps.map((s) => { const t = wtNum(s.targetWater);
+      return { name: tr ? T(s.name) : s.name, duration: String(s.duration), target: t, targetStr: t, origTarget: s.targetWater, instruction: tr ? T(s.instruction || '') : (s.instruction || '') }; }),
+    init: { dose: wtNum(base.dose), water: wtNum(base.water), temp: tempNum(base.temp), origDose: base.dose, origWater: base.water, origTemp: base.temp }
+  };
+  $('f-name').value = mode === 'copy' ? T('{name} (copy)', { name: rn(base) }).slice(0, 60) : base.name;
+  $('f-method').value = base.method;
+  $('f-dose').value = state.form.init.dose;
+  $('f-water').value = state.form.init.water;
+  $('f-ratio').value = fmt(base.ratio);
+  $('f-temp').value = state.form.init.temp;
+  $('f-grind').value = base.grind;
+  $('f-estimate').value = base.estimate || '';
+  $('form-title').textContent = T({ new: 'Create Recipe', edit: 'Edit Recipe', copy: 'Save as My Recipe' }[mode]);
+  const banner = $('form-banner');
+  banner.hidden = mode !== 'copy';
+  banner.textContent = mode === 'copy' ? (src.builtIn
+    ? T('Built-in recipes cannot be changed. Saving creates your own copy; the original stays untouched.')
+    : T('Saving creates a new recipe. The original is not changed.')) : '';
+  $('form-errors').hidden = true;
+  state.form.marked = [];
+  renderFormSteps();
+  updateStepsHint();
+  navigate('recipe-form');
+}
+function updateStepsHint() {
+  $('f-steps-hint').textContent = BrewLogic.isPouring($('f-method').value)
+    ? T('Target water is a running total. Each step should be the same or higher than the one before, and the last step must reach the total water.')
+    : T('For this method, targets only need to be between 0 and the total water. Their order and the last step are up to you.');
+}
+function renderFormSteps() {
+  const f = state.form, last = f.steps.length - 1;
+  $('f-steps').innerHTML = f.steps.map((s, i) => `
+    <div class="card step-edit">
+      <div class="step-edit-head"><strong>${T('Step {n}', { n: i + 1 })}</strong>
+        <div class="item-actions">
+          <button class="btn" type="button" data-action="step-up" data-step="${i}" aria-label="${T('Move step {n} up', { n: i + 1 })}" ${i === 0 ? 'disabled' : ''}>${T('Up')}</button>
+          <button class="btn" type="button" data-action="step-down" data-step="${i}" aria-label="${T('Move step {n} down', { n: i + 1 })}" ${i === last ? 'disabled' : ''}>${T('Down')}</button>
+          <button class="btn" type="button" data-action="step-delete" data-step="${i}" aria-label="${T('Delete step {n}', { n: i + 1 })}">${T('Delete')}</button>
+        </div></div>
+      <label>${T('Step Name')} <input type="text" maxlength="60" data-step="${i}" data-key="name" value="${esc(s.name)}"></label>
+      <label>${T('Duration (seconds)')} <input type="number" inputmode="numeric" min="1" step="1" data-step="${i}" data-key="duration" value="${esc(s.duration)}"></label>
+      <label><span>${T('Target Water, running total (')}<span class="u-water">g</span>)</span> <input type="number" inputmode="decimal" step="any" data-step="${i}" data-key="target" value="${esc(s.target)}"></label>
+      <label>${T('Instruction (use {target} for the amount)')} <input type="text" maxlength="200" data-step="${i}" data-key="instruction" value="${esc(s.instruction)}"></label>
+    </div>`).join('');
+  applyUnitLabels();
+}
+function onStepInput(e) {
+  const d = e.target.dataset || {}, f = state.form;
+  if (f && d.key && f.steps[Number(d.step)]) f.steps[Number(d.step)][d.key] = e.target.value;
+}
+function stepAction(action, i) {
+  const f = state.form;
+  if (!f) return;
+  if (action === 'step-add') {
+    const prev = f.steps[f.steps.length - 1];
+    f.steps.push({ name: '', duration: '30', target: prev ? prev.target : '', targetStr: null, origTarget: 0, instruction: '' });
+  } else if (!f.steps[i]) return;
+  else if (action === 'step-up' && i > 0) [f.steps[i - 1], f.steps[i]] = [f.steps[i], f.steps[i - 1]];
+  else if (action === 'step-down' && i < f.steps.length - 1) [f.steps[i + 1], f.steps[i]] = [f.steps[i], f.steps[i + 1]];
+  else if (action === 'step-delete') {
+    if (f.steps.length === 1) { showToast(T('A recipe needs at least one step.')); return; }
+    f.steps.splice(i, 1);
+  }
+  renderFormSteps();
+}
+function onFormTriplet(field) {   // same dose/water/ratio rule as the Calculator; only the derived field is written
+  const f = state.form;
+  if (!f) return;
+  f.lastField = field;
+  const res = derive(field, { dose: $('f-dose').value, water: $('f-water').value, ratio: $('f-ratio').value });
+  if (!res.ok) return;
+  if (field === 'water') $('f-dose').value = wtNum(res.dose); else $('f-water').value = wtNum(res.water);
+}
+function clearFormMarks() {
+  if (state.form) state.form.marked.forEach((el) => el.removeAttribute('aria-invalid'));
+  if (state.form) state.form.marked = [];
+}
+function showFormErrors(errors) {
+  clearFormMarks();
+  $('form-errors').innerHTML = `<strong>${T('Please fix these before saving:')}</strong><ul>${errors.map((e) => `<li>${esc(TM(e.message))}</li>`).join('')}</ul>`;
+  $('form-errors').hidden = false;
+  errors.forEach((e) => {
+    const m = /^step-(\d+)-(\w+)$/.exec(e.field);
+    const el = m ? document.querySelector(`[data-step="${m[1]}"][data-key="${m[2]}"]`) : (FORM_FIELD_IDS[e.field] ? $(FORM_FIELD_IDS[e.field]) : null);
+    if (el) { el.setAttribute('aria-invalid', 'true'); state.form.marked.push(el); }
+  });
+  window.scrollTo(0, 0);
+}
+/* Fields the user did not touch keep their exact stored values, so imperial display rounding never drifts the recipe. */
+function keepUntouchedOriginals(rec, draft, f) {
+  const cand = JSON.parse(JSON.stringify(rec));
+  if (draft.dose === f.init.dose) cand.dose = f.init.origDose;
+  if (draft.water === f.init.water) cand.water = f.init.origWater;
+  if (draft.temp === f.init.temp) cand.temp = f.init.origTemp;
+  cand.steps.forEach((s, i) => { const src = f.steps[i]; if (src.targetStr !== null && src.target === src.targetStr) s.targetWater = src.origTarget; });
+  return validateRecipe(cand).length ? rec : cand;
+}
+function saveRecipeForm() {
+  const f = state.form;
+  if (!f) return;
+  const draft = { name: $('f-name').value, method: $('f-method').value, dose: $('f-dose').value, water: $('f-water').value, ratio: $('f-ratio').value,
+    temp: $('f-temp').value, grind: $('f-grind').value, estimate: $('f-estimate').value,
+    steps: f.steps.map((s) => ({ name: s.name, duration: s.duration, target: s.target, instruction: s.instruction })) };
+  const res = parseRecipeDraft(draft, state.settings.units);
+  if (res.errors.length) { showFormErrors(res.errors); return; }
+  const rec = keepUntouchedOriginals(res.recipe, draft, f);
+  rec.id = f.mode === 'edit' ? f.id : newId(new Set(state.recipes.map((r) => r.id)));
+  rec.builtIn = false;
+  if (f.basedOn) rec.basedOn = f.basedOn;
+  if (f.mode === 'edit') state.userRecipes = state.userRecipes.map((r) => (r.id === rec.id ? rec : r));
+  else state.userRecipes.push(rec);
+  state.activeRecipeId = rec.id;
+  rebuildRecipes();
+  const st = state.engine && state.engine.status;
+  if (f.mode === 'edit' && state.activeBrew && state.activeBrew.id === rec.id && st !== 'running' && st !== 'paused') loadBrew(normalizeRecipe(rec));   // timer would otherwise keep the old steps
+  refreshCalcAfterRecipeChange();
+  saveState();
+  showToast(T(f.mode === 'edit' ? 'Recipe saved.' : 'Recipe created.'));
+  openDetail(rec.id);
+}
+function cancelRecipeForm() {
+  const f = state.form;
+  if (f && f.mode === 'edit' && getRecipe(f.id)) openDetail(f.id); else navigate('recipes');
+}
+
+/* ---------- Delete / confirm ---------- */
+function askConfirm(title, message, okLabel) {
+  const dlg = $('confirm-dialog');
+  if (typeof dlg.showModal !== 'function') return Promise.resolve(window.confirm(`${title}\n${message}`));
+  $('confirm-title').textContent = title;
+  $('confirm-message').textContent = message;
+  $('confirm-ok').textContent = okLabel || T('Confirm');
+  return new Promise((resolve) => { confirmResolver = resolve; dlg.showModal(); });
+}
+function closeConfirm(value) {
+  const resolve = confirmResolver, dlg = $('confirm-dialog');
+  confirmResolver = null;
+  if (dlg.open) dlg.close();
+  if (resolve) resolve(value);
+}
+async function deleteRecipe(id) {
+  const r = getRecipe(id);
+  if (!r) return false;
+  if (r.builtIn) { showToast(T('Built-in recipes cannot be deleted. Duplicate it to make your own version.')); return false; }
+  const ok = await askConfirm(T('Delete this recipe?'), T('“{name}” will be removed from this browser. This cannot be undone.', { name: r.name }), T('Delete'));
+  if (!ok) return false;
+  state.userRecipes = state.userRecipes.filter((x) => x.id !== id);
+  state.favorites = state.favorites.filter((x) => x !== id);
+  state.recent = state.recent.filter((x) => x !== id);
+  if (state.activeRecipeId === id) state.activeRecipeId = null;
+  if (state.detailId === id) state.detailId = null;
+  const st = state.engine && state.engine.status;
+  if (state.activeBrew && state.activeBrew.id === id && st !== 'running' && st !== 'paused') {
+    stopTicker(); releaseWakeLock();
+    Object.assign(state, { activeBrew: null, engine: null, brewError: '', stepsKey: '' });
+  }
+  rebuildRecipes();
+  refreshCalcAfterRecipeChange();
+  saveState();
+  navigate('recipes');
+  showToast(T('Recipe deleted.'));
+  return true;
+}
+function refreshCalcAfterRecipeChange() {
+  const base = getRecipe(state.calc.baseId);
+  if (!base || base.method !== state.calc.method) applyCalcDefaults(recipesForMethod(state.calc.method)[0] || state.recipes[0]);
+  else fillRecipeSelect(state.calc.method, base.id);
+}
+
+/* ---------- Events (one delegated click handler for every data-action button) ---------- */
+function handleAction(action, ds) {
+  switch (action) {
+    case 'open': openDetail(ds.id); break;
+    case 'favorite': toggleFavorite(ds.id); break;
+    case 'brew': selectRecipeForBrewing(ds.id); break;
+    case 'filter': state.filter = ds.filter; renderRecipes(); break;
+    case 'clear-filters': state.search = ''; state.filter = 'all'; $('recipe-search').value = ''; renderRecipes(); break;
+    case 'new': openRecipeForm('new'); break;
+    case 'calc': { const r = getRecipe(ds.id); if (r) { state.activeRecipeId = r.id; saveState(); applyCalcDefaults(r); navigate('calculator'); } break; }
+    case 'edit': openRecipeForm('edit', ds.id); break;
+    case 'duplicate': openRecipeForm('copy', ds.id); break;
+    case 'delete': deleteRecipe(ds.id); break;
+    case 'step-add': case 'step-up': case 'step-down': case 'step-delete': stepAction(action, Number(ds.step)); break;
+    default: break;
+  }
+}
+/* ---------- Export / import (JSON backup of your own recipes) ---------- */
+const MAX_IMPORT_BYTES = 1048576, MAX_IMPORT_RECIPES = 200;
+const canon = (r) => { const { id, builtIn, basedOn, ...rest } = r; return JSON.stringify(rest, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v)); };
+function exportRecipes() {
+  if (!state.userRecipes.length) { showToast(T('You have no recipes of your own to export yet.')); return; }
+  const payload = { app: 'brew-calculator', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), userRecipes: state.userRecipes };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = `brew-calculator-recipes-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast(T('Exported {n} recipe(s).', { n: state.userRecipes.length }));
+}
+async function importRecipes(file) {
+  if (!file) return;
+  if (file.size > MAX_IMPORT_BYTES) { showToast(T('This file is too large to import.')); return; }
+  let raw;
+  try { raw = JSON.parse(await file.text()); } catch (e) { showToast(T('This file is not valid JSON.')); return; }
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.userRecipes)) { showToast(T('This file does not contain Brew Calculator recipes.')); return; }
+  const list = raw.userRecipes.slice(0, MAX_IMPORT_RECIPES);
+  if (!list.length) { showToast(T('No recipes found in this file.')); return; }
+  const { data } = BrewLogic.sanitizeStored({ userRecipes: list }, state.recipes.map((r) => r.id));   // validates each recipe; clashing ids get new ones
+  const seen = new Set(state.userRecipes.map(canon));
+  const fresh = data.userRecipes.filter((r) => { const k = canon(r); if (seen.has(k)) return false; seen.add(k); return true; });
+  const skipped = raw.userRecipes.length - fresh.length;
+  if (fresh.length) {
+    fresh.forEach((r) => { r.builtIn = false; state.userRecipes.push(r); });
+    rebuildRecipes(); refreshCalcAfterRecipeChange(); saveState(); render();
+  }
+  const n = fresh.length;
+  showToast(!n ? T('No new recipes were imported. Skipped {s} (invalid or already saved).', { s: skipped })
+    : skipped ? T('Imported {n} recipe(s). Skipped {s} (invalid or already saved).', { n, s: skipped }) : T('Imported {n} recipe(s).', { n }));
+}
+
+function bindRecipeEvents() {
+  $('btn-export').addEventListener('click', exportRecipes);
+  $('btn-import').addEventListener('click', () => $('import-file').click());
+  $('import-file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; await importRecipes(f); });
+  $('recipe-search').addEventListener('input', (e) => { state.search = e.target.value; renderRecipes(); });
+  $('btn-create-recipe').addEventListener('click', () => openRecipeForm('new'));
+  $('btn-detail-back').addEventListener('click', () => navigate('recipes'));
+  $('btn-add-step').addEventListener('click', () => stepAction('step-add'));
+  $('btn-save-recipe').addEventListener('click', saveRecipeForm);
+  $('btn-cancel-recipe').addEventListener('click', cancelRecipeForm);
+  ['dose', 'water', 'ratio'].forEach((k) => $('f-' + k).addEventListener('input', () => onFormTriplet(k)));
+  $('f-method').addEventListener('change', updateStepsHint);
+  $('f-steps').addEventListener('input', onStepInput);
+  $('confirm-ok').addEventListener('click', () => closeConfirm(true));
+  $('confirm-cancel').addEventListener('click', () => closeConfirm(false));
+  $('confirm-dialog').addEventListener('close', () => closeConfirm(false));
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (btn) handleAction(btn.dataset.action, btn.dataset);
+  });
+}
+
+</script>
+<script>
+/* Offline support: needs http(s) (or localhost); on file:// the app still works, just without offline install. */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+document.getElementById('theme-quick').addEventListener('click', () => {
+  const c = document.getElementById('set-theme'); c.checked = !c.checked; c.dispatchEvent(new Event('change'));
+});
+</script>
+</body>
+</html>
