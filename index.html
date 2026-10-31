@@ -548,7 +548,7 @@ label.switch{color:var(--text);font-weight:500}
     const now = opts.now, isAuto = opts.isAutoAdvance || (() => true);
     const tl = buildTimeline(steps);
     const e = { status: 'idle', baseMs: 0, startedAt: 0, index: 0, waiting: false, timeline: tl };
-    const elapsed = () => Math.min(e.baseMs + (e.status === 'running' ? now() - e.startedAt : 0), tl.total);
+    const elapsed = () => Math.min(e.baseMs + (e.status === 'running' ? now() - e.startedAt : 0), isAuto() ? tl.total : tl.ends[e.index]);   // manual mode never runs past the end of the current step, however long the page was asleep
     function snap(events) {
       const el = elapsed();
       const idx = e.status === 'complete' ? tl.count - 1 : e.index;
@@ -1727,7 +1727,8 @@ function init() {
   const restored = restoreBrew();
   if (!state.activeBrew) { const r0 = getRecipe(state.activeRecipeId) || state.recipes[0]; if (r0) loadBrew(normalizeRecipe(r0)); }   // Timer tab is ready to start straight away
   navigate(location.hash.slice(1) || (restored ? 'timer' : 'home'));
-  if (state.loadNotice) showToast(state.loadNotice);
+  if (state.storageOk === false) showToast(T('This browser is not letting the app save data. Changes will be lost when you close the page.'));   // more useful than a "could not be read" notice
+  else if (state.loadNotice) showToast(state.loadNotice);
 }
 document.addEventListener('DOMContentLoaded', init);
 
