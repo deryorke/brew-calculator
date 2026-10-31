@@ -230,6 +230,12 @@ label.switch{color:var(--text);font-weight:500}
 #view-settings .card{max-width:680px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 .steps li.active .muted{color:var(--accent-strong)}
+.update-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(132px + env(safe-area-inset-bottom,0px));width:min(92vw,460px);z-index:21;background:var(--surface,var(--bg));color:var(--text);border:1px solid var(--line,currentColor);border-radius:14px;box-shadow:var(--shadow);padding:.8rem 1rem;display:grid;gap:.6rem}
+.update-banner[hidden]{display:none}
+.update-banner p{margin:0}
+.update-actions{display:flex;gap:.6rem}
+.update-actions .btn{flex:1}
+@media (min-width:768px){.update-banner{bottom:5rem}}
 .backup-actions{display:flex;flex-wrap:wrap;gap:.6rem}
 .backup-actions .btn{flex:1 1 140px}
 </style>
@@ -422,6 +428,10 @@ label.switch{color:var(--text);font-weight:500}
   </div>
 </dialog>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="update-banner" class="update-banner" role="status" aria-live="polite" hidden>
+  <p id="update-text">A new version is available.</p>
+  <div class="update-actions"><button class="btn primary" id="btn-update" type="button">Update now</button><button class="btn" id="btn-update-later" type="button">Later</button></div>
+</div>
 
 <script>
 'use strict';
@@ -721,6 +731,11 @@ label.switch{color:var(--text);font-weight:500}
    TM(text)      translates an already-built message (logic-layer validation text) by matching its template.
    Internal data (method names, grind sizes, saved recipes) always stays in English; only the display is translated. */
 const I18N = { lang: 'en', dict: {
+ "Recipe is missing.": "Resep tidak ditemukan.",
+ "A new version is available.": "Versi baru tersedia.",
+ "Your brew in progress will be restored.": "Seduhan yang sedang berjalan akan dipulihkan.",
+ "Update now": "Perbarui sekarang",
+ "Later": "Nanti",
  "Brew in progress restored.": "Seduhan yang sedang berjalan dipulihkan.",
  "Add reminder (.ics)": "Tambah pengingat (.ics)",
  "Brew complete. Added from Brew Calculator.": "Seduhan selesai. Ditambahkan dari Brew Calculator.",
@@ -2136,7 +2151,28 @@ function bindRecipeEvents() {
 <script>
 /* Offline support: needs http(s) (or localhost); on file:// the app still works, just without offline install. */
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  window.addEventListener('load', async () => {
+    let updating = false;   // reload only after the person chose to update, never on the very first install
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (updating) location.reload(); });
+    let reg;
+    try { reg = await navigator.serviceWorker.register('sw.js'); } catch (e) { return; }
+    const offer = (worker) => { if (worker && navigator.serviceWorker.controller) showUpdateBanner(worker, () => { updating = true; }); };
+    offer(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      if (w) w.addEventListener('statechange', () => { if (w.state === 'installed') offer(w); });
+    });
+    const check = () => reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    setInterval(check, 3600000);
+  });
+}
+function showUpdateBanner(worker, onAccept) {
+  const busy = state.engine && (state.engine.status === 'running' || state.engine.status === 'paused');
+  $('update-text').textContent = T('A new version is available.') + (busy ? ' ' + T('Your brew in progress will be restored.') : '');
+  $('update-banner').hidden = false;
+  $('btn-update').onclick = () => { onAccept(); saveBrew(); $('update-banner').hidden = true; worker.postMessage('SKIP_WAITING'); };
+  $('btn-update-later').onclick = () => { $('update-banner').hidden = true; };
 }
 document.getElementById('theme-quick').addEventListener('click', () => {
   const c = document.getElementById('set-theme'); c.checked = !c.checked; c.dispatchEvent(new Event('change'));

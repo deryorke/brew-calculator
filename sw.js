@@ -1,11 +1,11 @@
 /* Brew Calculator service worker: offline app shell.
    Bump CACHE_VERSION whenever index.html or any listed file changes, so installed copies update. */
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v7';
 const CACHE = `brew-calculator-${CACHE_VERSION}`;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));   // no skipWaiting: the page offers the update, and the person decides when
 });
 
 self.addEventListener('activate', (event) => {
@@ -42,3 +42,6 @@ self.addEventListener('notificationclick', (event) => {
     return open ? open.focus() : self.clients.openWindow('./#timer');
   }));
 });
+
+/* The page asks for activation once the person taps "Update now". */
+self.addEventListener('message', (event) => { if (event.data === 'SKIP_WAITING') self.skipWaiting(); });
