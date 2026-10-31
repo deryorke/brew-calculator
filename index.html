@@ -336,7 +336,8 @@ label.switch{color:var(--text);font-weight:500}
       </div>
       <p id="timer-unit-note" class="muted small" hidden></p>
       <p id="timer-status" class="muted small" aria-live="polite"></p>
-      <p id="long-hint" class="note small" hidden>Long brew: turn on Notifications in Settings and keep this app open in the background. A locked phone can pause the timer.</p>
+      <p id="long-hint" class="note small" hidden>Long brew: turn on Notifications in Settings and keep this app open in the background. A locked phone can pause the timer, so also add a calendar reminder.</p>
+      <div id="ics-row" class="controls" hidden><button class="btn" id="btn-ics" type="button">Add reminder (.ics)</button></div>
     </div>
     <div id="timer-complete" class="card timer-card" hidden>
       <h2>BREW COMPLETE</h2>
@@ -720,11 +721,18 @@ label.switch{color:var(--text);font-weight:500}
    TM(text)      translates an already-built message (logic-layer validation text) by matching its template.
    Internal data (method names, grind sizes, saved recipes) always stays in English; only the display is translated. */
 const I18N = { lang: 'en', dict: {
+ "Brew in progress restored.": "Seduhan yang sedang berjalan dipulihkan.",
+ "Add reminder (.ics)": "Tambah pengingat (.ics)",
+ "Brew complete. Added from Brew Calculator.": "Seduhan selesai. Ditambahkan dari Brew Calculator.",
+ "{recipe}: {step} finished": "{recipe}: {step} selesai",
+ "Next: {step}": "Berikutnya: {step}",
+ "Reminder file ready: {n} alert(s), the last at {time}.": "File pengingat siap: {n} peringatan, yang terakhir {time}.",
+ "Times assume you start now.": "Waktu dihitung seolah kamu mulai sekarang.",
  "Vibration": "Getaran",
  "Vibration is not supported on this device or browser.": "Getaran tidak didukung di perangkat atau browser ini.",
  "Notifications when a step ends": "Notifikasi saat langkah selesai",
  "Alerts are sent only while the timer is running in the background. If the phone locks or the browser closes the page, the timer can pause and no alert will arrive.": "Peringatan hanya dikirim saat timer berjalan di latar belakang. Jika ponsel terkunci atau browser menutup halaman, timer bisa berhenti dan peringatan tidak akan datang.",
- "Long brew: turn on Notifications in Settings and keep this app open in the background. A locked phone can pause the timer.": "Seduhan panjang: aktifkan Notifikasi di Pengaturan dan biarkan aplikasi terbuka di latar belakang. Ponsel yang terkunci bisa menghentikan timer.",
+ "Long brew: turn on Notifications in Settings and keep this app open in the background. A locked phone can pause the timer, so also add a calendar reminder.": "Seduhan panjang: aktifkan Notifikasi di Pengaturan dan biarkan aplikasi terbuka di latar belakang. Ponsel yang terkunci bisa menghentikan timer, jadi tambahkan juga pengingat kalender.",
  "Notifications are not supported on this browser.": "Notifikasi tidak didukung di browser ini.",
  "Notifications are blocked. Allow them in the browser or site settings to use this.": "Notifikasi diblokir. Izinkan lewat pengaturan browser atau situs untuk memakainya.",
  "Brew complete": "Seduhan selesai",
@@ -1431,7 +1439,40 @@ function loadBrew(recipe) {
   if (errors.length) { state.activeBrew = null; state.engine = null; return; }
   state.activeBrew = recipe;
   state.engine = createTimerEngine(recipe.steps, { now: timerNow, isAutoAdvance: () => state.settings.autoAdvance });
+  saveBrew();   // a new or replaced brew is idle, so any saved one is dropped
 }
+/* ---------- Keep a running brew across reloads and app restarts (the engine runs on timestamps, so it resumes exactly) ---------- */
+const BREW_KEY = 'brewCalculator.brew.v1', STALE_BREW_MS = 6 * 3600 * 1000;
+function saveBrew() {
+  try {
+    const e = state.engine;
+    if (!e || !state.activeBrew || (e.status !== 'running' && e.status !== 'paused')) { localStorage.removeItem(BREW_KEY); return; }
+    localStorage.setItem(BREW_KEY, JSON.stringify({ v: 1, recipe: state.activeBrew, eng: { status: e.status, baseMs: e.baseMs, startedAt: e.startedAt, index: e.index, waiting: e.waiting } }));
+  } catch (err) { /* storage is optional */ }
+}
+function restoreBrew() {
+  const saved = readStored(BREW_KEY), g = saved && saved.eng;
+  try {
+    if (!g || saved.v !== 1 || !saved.recipe || !Array.isArray(saved.recipe.steps)) throw new Error('none');
+    const total = saved.recipe.steps.reduce((t, st) => t + st.duration * 1000, 0), now = timerNow();
+    const sane = (g.status === 'running' || g.status === 'paused') && [g.baseMs, g.startedAt, g.index].every(Number.isFinite)
+      && g.baseMs >= 0 && g.baseMs <= total && g.index >= 0 && g.index < saved.recipe.steps.length;
+    if (!sane || (g.status === 'running' && now > g.startedAt + (total - g.baseMs) + STALE_BREW_MS)) throw new Error('stale');
+    loadBrew(saved.recipe);
+    if (!state.engine) throw new Error('invalid');
+    Object.assign(state.engine, { status: g.status, baseMs: g.baseMs, startedAt: Math.min(g.startedAt, now), index: g.index, waiting: !!g.waiting });
+  } catch (err) {
+    try { if (readStored(BREW_KEY) !== undefined) localStorage.removeItem(BREW_KEY); } catch (e2) { /* optional */ }
+    return false;
+  }
+  const snap = state.engine.update();
+  if (state.engine.status === 'running') { startTicker(); acquireWakeLock(); }
+  handleSnapshot(snap);
+  saveBrew();
+  showToast(T('Brew in progress restored.'));
+  return true;
+}
+
 let tickWorker = null;   // a Worker keeps ticking at full rate while the tab is in the background; falls back to setInterval
 function startTicker() {
   stopTicker();
@@ -1454,8 +1495,10 @@ function timerAction(name) {
   if (name === 'start' || name === 'resume') { if (eng.status === 'running') { startTicker(); acquireWakeLock(); } }
   if (name === 'pause' || name === 'reset') { stopTicker(); releaseWakeLock(); }
   handleSnapshot(snap);
+  saveBrew();
 }
 function handleSnapshot(snap) {
+  if (snap.events.length) saveBrew();
   if (snap.events.includes('complete')) { stopTicker(); releaseWakeLock(); beep(3, 988); alertUser('complete', snap); }
   else if (snap.events.includes('step')) { beep(1, 880); alertUser('step', snap); }
   else if (snap.events.includes('stepEnd')) { beep(2, 880); alertUser('stepEnd', snap); }
@@ -1463,7 +1506,7 @@ function handleSnapshot(snap) {
 }
 /* ---------- Vibration and notifications (best effort: they only fire while the page is alive) ---------- */
 const VIBRATE_PATTERNS = { step: [200], stepEnd: [200, 100, 200], complete: [400, 150, 400, 150, 400] };
-function vibrate(pattern) { try { if (state.settings.vibrate && navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* optional */ } }
+function vibrate(pattern) { try { if (state.settings.vibrate && navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(pattern); } catch (e) { /* optional */ } }
 const canNotify = () => 'Notification' in window;
 function syncAlertControls() {
   const s = state.settings, v = $('set-vibrate'), n = $('set-notify'), granted = canNotify() && Notification.permission === 'granted';
@@ -1528,7 +1571,8 @@ function paintTimer(snap) {
   const r = state.activeBrew, st = snap.status, i = snap.index, s = r.steps[i], next = r.steps[i + 1];
   const complete = st === 'complete';
   $('timer-live').hidden = complete;
-  $('long-hint').hidden = complete || snap.totalMs < 1800000;
+  $('long-hint').hidden = $('ics-row').hidden = complete || snap.totalMs < 1800000;
+  state.lastSnap = snap; state.lastSnapAt = Date.now();
   $('timer-complete').hidden = !complete;
   const secs = state.settings.timerMode === 'down'
     ? Math.ceil((snap.stepDurationMs - snap.stepElapsedMs) / 1000)
@@ -1665,8 +1709,9 @@ function init() {
   initCalculator();
   initRecipeForm();
   bindEvents();
+  const restored = restoreBrew();
   if (!state.activeBrew) { const r0 = getRecipe(state.activeRecipeId) || state.recipes[0]; if (r0) loadBrew(normalizeRecipe(r0)); }   // Timer tab is ready to start straight away
-  navigate(location.hash.slice(1) || 'home');
+  navigate(location.hash.slice(1) || (restored ? 'timer' : 'home'));
   if (state.loadNotice) showToast(state.loadNotice);
 }
 document.addEventListener('DOMContentLoaded', init);
@@ -2016,7 +2061,56 @@ async function importRecipes(file) {
     : skipped ? T('Imported {n} recipe(s). Skipped {s} (invalid or already saved).', { n, s: skipped }) : T('Imported {n} recipe(s).', { n }));
 }
 
+/* ---------- Calendar reminder (.ics): a reliable alert for long brews, independent of this page staying alive ---------- */
+const icsEscape = (t) => String(t).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+const icsDate = (ms) => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+function icsFold(line) {   // lines are limited to 75 octets; continuation lines start with a space
+  const enc = new TextEncoder(), out = []; let cur = '', size = 0;
+  for (const ch of line) {
+    const n = enc.encode(ch).length, limit = out.length ? 74 : 75;
+    if (size + n > limit) { out.push(cur); cur = ''; size = 0; }
+    cur += ch; size += n;
+  }
+  out.push(cur);
+  return out.join('\r\n ');
+}
+function buildIcs(events, stampMs) {
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Brew Calculator//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  events.forEach((e, i) => {
+    L.push('BEGIN:VEVENT', `UID:brew-${stampMs}-${i}@brew-calculator`, `DTSTAMP:${icsDate(stampMs)}`,
+      `DTSTART:${icsDate(e.at)}`, `DTEND:${icsDate(e.at + 300000)}`, `SUMMARY:${icsEscape(e.title)}`, `DESCRIPTION:${icsEscape(e.note)}`,
+      'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEscape(e.title)}`, 'TRIGGER:PT0S', 'END:VALARM', 'END:VEVENT');
+  });
+  L.push('END:VCALENDAR');
+  return L.map(icsFold).join('\r\n') + '\r\n';
+}
+function brewReminders(r, snap, snapAt, nowMs) {   // one alert per remaining long step (10+ min) plus the end of the brew
+  const tl = state.engine.timeline, last = r.steps.length - 1;
+  const done = snap.overallMs + (snap.status === 'running' ? nowMs - snapAt : 0), out = [];
+  r.steps.forEach((step, i) => {
+    if (tl.ends[i] <= done || (i !== last && step.duration < 600)) return;
+    const at = nowMs + (tl.ends[i] - done), next = r.steps[i + 1];
+    out.push(i === last ? { at, title: T('{name} is ready.', { name: rn(r) }), note: T('Brew complete. Added from Brew Calculator.') }
+      : { at, title: T('{recipe}: {step} finished', { recipe: rn(r), step: sn(step, r) }), note: T('Next: {step}', { step: sn(next, r) }) });
+  });
+  return out;
+}
+function addReminder() {
+  const r = state.activeBrew, snap = state.lastSnap;
+  if (!r || !state.engine || !snap || snap.status === 'complete') return;
+  const nowMs = Date.now(), events = brewReminders(r, snap, state.lastSnapAt, nowMs);
+  if (!events.length) return;
+  const url = URL.createObjectURL(new Blob([buildIcs(events, nowMs)], { type: 'text/calendar;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = `brew-reminder-${new Date(nowMs).toISOString().slice(0, 16).replace(/[-:T]/g, '')}.ics`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const when = new Date(events[events.length - 1].at).toLocaleString(I18N.lang === 'id' ? 'id-ID' : 'en-US', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+  showToast(T('Reminder file ready: {n} alert(s), the last at {time}.', { n: events.length, time: when }) + (snap.status === 'idle' ? ' ' + T('Times assume you start now.') : ''));
+}
+
 function bindRecipeEvents() {
+  $('btn-ics').addEventListener('click', addReminder);
   $('btn-export').addEventListener('click', exportRecipes);
   $('btn-import').addEventListener('click', () => $('import-file').click());
   $('import-file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; await importRecipes(f); });

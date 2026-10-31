@@ -1,6 +1,6 @@
 /* Brew Calculator service worker: offline app shell.
    Bump CACHE_VERSION whenever index.html or any listed file changes, so installed copies update. */
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v4';
 const CACHE = `brew-calculator-${CACHE_VERSION}`;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 
