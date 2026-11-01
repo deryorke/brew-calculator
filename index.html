@@ -311,6 +311,10 @@ label.switch{color:var(--text);font-weight:500}
 
   <section id="view-recipes" class="view" data-view-name="recipes" hidden>
     <div class="row page-head"><div><div class="eyebrow">The brew library</div><h2 class="page-title">Recipes for your <em>ritual.</em></h2><p class="lead">Built-in starting points and your own recipes, all in one place.</p></div><button class="btn primary" id="btn-create-recipe">＋ Create Recipe</button></div>
+    <div id="backup-nudge" class="card note" hidden>
+      <p id="backup-nudge-text"></p>
+      <div class="update-actions"><button class="btn primary" id="btn-nudge-export" type="button">Export now</button><button class="btn" id="btn-nudge-later" type="button">Remind me later</button></div>
+    </div>
     <input id="recipe-search" class="search" type="search" placeholder="Search recipes or methods" aria-label="Search recipes">
     <div id="recipe-filters" class="chips" role="group" aria-label="Filter recipes"></div>
     <div id="recipe-list" class="list"></div>
@@ -380,8 +384,10 @@ label.switch{color:var(--text);font-weight:500}
       <label class="switch">Keep screen awake while brewing <input type="checkbox" id="set-wakelock"></label>
       <p id="wakelock-note" class="muted small" hidden>Screen Wake Lock is not available here. It needs a supporting browser and HTTPS or localhost.</p>
       <h3>Backup</h3>
-      <p class="muted small">Export your own recipes to a JSON file, or import recipes from one. Built-in recipes are not included.</p>
-       <div class="backup-actions">
+      <p class="muted small">Export your own recipes, favorites and settings to a JSON file, or restore them from one. Built-in recipes are not included.</p>
+       <p id="backup-status" class="muted small"></p>
+      <p id="persist-status" class="muted small" hidden></p>
+      <div class="backup-actions">
          <button class="btn" id="btn-export" type="button">Export recipes</button>
          <button class="btn" id="btn-import" type="button">Import recipes</button>
          <input type="file" id="import-file" accept=".json,application/json" hidden>
@@ -731,6 +737,20 @@ label.switch{color:var(--text);font-weight:500}
    TM(text)      translates an already-built message (logic-layer validation text) by matching its template.
    Internal data (method names, grind sizes, saved recipes) always stays in English; only the display is translated. */
 const I18N = { lang: 'en', dict: {
+ "Exported your favorites and settings.": "Favorit dan pengaturanmu diekspor.",
+ "Apply the saved settings?": "Terapkan pengaturan dari file?",
+ "This file also contains settings such as language, units and timer options. Replace your current settings with them?": "File ini juga berisi pengaturan seperti bahasa, satuan, dan opsi timer. Ganti pengaturanmu saat ini dengan isinya?",
+ "Apply": "Terapkan",
+ "{n} favorite(s) restored.": "{n} favorit dipulihkan.",
+ "Settings applied.": "Pengaturan diterapkan.",
+ "Nothing new to import from this file.": "Tidak ada yang baru untuk diimpor dari file ini.",
+ "Export now": "Ekspor sekarang",
+ "Remind me later": "Ingatkan nanti",
+ "You have {n} recipe(s) of your own and no backup from the last 30 days. Export them so they cannot be lost.": "Kamu punya {n} resep sendiri dan belum ada cadangan dalam 30 hari terakhir. Ekspor agar tidak hilang.",
+ "Last backup: {date}.": "Cadangan terakhir: {date}.",
+ "Last backup: never.": "Cadangan terakhir: belum pernah.",
+ "Storage is protected: the browser keeps your data unless you clear it yourself.": "Penyimpanan terlindungi: browser menyimpan datamu kecuali kamu menghapusnya sendiri.",
+ "Storage is not protected: the browser may delete your data if the device runs low on space. Export regularly.": "Penyimpanan belum terlindungi: browser bisa menghapus datamu jika ruang perangkat menipis. Ekspor secara berkala.",
  "Recipe is missing.": "Resep tidak ditemukan.",
  "A new version is available.": "Versi baru tersedia.",
  "Your brew in progress will be restored.": "Seduhan yang sedang berjalan akan dipulihkan.",
@@ -755,7 +775,7 @@ const I18N = { lang: 'en', dict: {
  "Step finished: {name}": "Langkah selesai: {name}",
  "Open the timer to continue.": "Buka timer untuk melanjutkan.",
  "Backup": "Cadangan",
- "Export your own recipes to a JSON file, or import recipes from one. Built-in recipes are not included.": "Ekspor resepmu sendiri ke file JSON, atau impor resep dari file tersebut. Resep bawaan tidak ikut.",
+ "Export your own recipes, favorites and settings to a JSON file, or restore them from one. Built-in recipes are not included.": "Ekspor resep sendiri, favorit, dan pengaturan ke file JSON, atau pulihkan dari file tersebut. Resep bawaan tidak ikut.",
  "Export recipes": "Ekspor resep",
  "Import recipes": "Impor resep",
  "You have no recipes of your own to export yet.": "Kamu belum punya resep sendiri untuk diekspor.",
@@ -1271,6 +1291,7 @@ function applySettings() {
   $('set-watermeasure').disabled = s.units === 'imperial';
   $('set-wakelock').checked = s.wakeLock;
   syncAlertControls();
+  renderBackupInfo();
   if (!('wakeLock' in navigator)) { $('set-wakelock').disabled = true; $('wakelock-note').hidden = false; }
   $('units-note').textContent = isImperial()
     ? T('Imperial: ounces by weight (1 oz = 28.3495 g) and °F. Recipes keep their original values; only the display changes.')
@@ -1286,6 +1307,7 @@ function render() {
   if (state.view === 'recipes') renderRecipes();
   if (state.view === 'recipe-detail') renderDetail();
   if (state.view === 'timer') renderTimer();
+  if (state.view === 'recipes' || state.view === 'settings') renderBackupInfo();
 }
 
 /* ---------- Units & feedback (Phase 3). Internal values are ALWAYS grams and °C; conversion happens only for display/input. ---------- */
@@ -1725,6 +1747,7 @@ function init() {
   initRecipeForm();
   bindEvents();
   const restored = restoreBrew();
+  if (state.userRecipes.length && window.matchMedia && matchMedia('(display-mode: standalone)').matches) requestPersist();   // installed app: the browser usually says yes silently
   if (!state.activeBrew) { const r0 = getRecipe(state.activeRecipeId) || state.recipes[0]; if (r0) loadBrew(normalizeRecipe(r0)); }   // Timer tab is ready to start straight away
   navigate(location.hash.slice(1) || (restored ? 'timer' : 'home'));
   if (state.storageOk === false) showToast(T('This browser is not letting the app save data. Changes will be lost when you close the page.'));   // more useful than a "could not be read" notice
@@ -1974,6 +1997,7 @@ function saveRecipeForm() {
   if (f.mode === 'edit' && state.activeBrew && state.activeBrew.id === rec.id && st !== 'running' && st !== 'paused') loadBrew(normalizeRecipe(rec));   // timer would otherwise keep the old steps
   refreshCalcAfterRecipeChange();
   saveState();
+  requestPersist();
   showToast(T(f.mode === 'edit' ? 'Recipe saved.' : 'Recipe created.'));
   openDetail(rec.id);
 }
@@ -2046,35 +2070,96 @@ function handleAction(action, ds) {
 /* ---------- Export / import (JSON backup of your own recipes) ---------- */
 const MAX_IMPORT_BYTES = 1048576, MAX_IMPORT_RECIPES = 200;
 const canon = (r) => { const { id, builtIn, basedOn, ...rest } = r; return JSON.stringify(rest, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v)); };
+/* ---------- Data safety: ask the browser to keep our data, and nudge toward a backup ---------- */
+const META_KEY = 'brewCalculator.meta.v1', DAY_MS = 86400000, BACKUP_EVERY_DAYS = 30, SNOOZE_DAYS = 14;
+function readMeta() { const m = readStored(META_KEY); return m && typeof m === 'object' && !Array.isArray(m) ? m : {}; }
+function writeMeta(patch) { try { localStorage.setItem(META_KEY, JSON.stringify({ ...readMeta(), ...patch })); } catch (e) { /* optional */ } }
+const num0 = (v) => (Number.isFinite(v) ? v : 0);
+async function requestPersist() {
+  if (!navigator.storage || !navigator.storage.persist) return;
+  try { state.persisted = (await navigator.storage.persisted()) || (await navigator.storage.persist()); } catch (e) { state.persisted = undefined; }
+  renderBackupInfo();
+}
+function renderBackupInfo() {
+  if (state.persisted === undefined && !state.persistChecked && navigator.storage && navigator.storage.persisted) {   // learn the current status once, without asking for anything
+    state.persistChecked = true;
+    navigator.storage.persisted().then((v) => { state.persisted = v; renderBackupInfo(); }).catch(() => {});
+  }
+  const m = readMeta(), last = num0(m.lastBackup), now = Date.now(), n = state.userRecipes.length;
+  const locale = state.settings.language === 'id' ? 'id-ID' : 'en-US';
+  const due = n > 0 && now - last > BACKUP_EVERY_DAYS * DAY_MS && now - num0(m.snoozedAt) > SNOOZE_DAYS * DAY_MS;
+  $('backup-nudge').hidden = !due;
+  if (due) $('backup-nudge-text').textContent = T('You have {n} recipe(s) of your own and no backup from the last 30 days. Export them so they cannot be lost.', { n });
+  $('backup-status').textContent = last ? T('Last backup: {date}.', { date: new Date(last).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) }) : T('Last backup: never.');
+  const ps = $('persist-status');
+  ps.hidden = state.persisted === undefined;
+  if (!ps.hidden) ps.textContent = state.persisted ? T('Storage is protected: the browser keeps your data unless you clear it yourself.') : T('Storage is not protected: the browser may delete your data if the device runs low on space. Export regularly.');
+}
+
+const EXPORT_SETTINGS = ['language', 'theme', 'units', 'waterMeasure', 'timerMode', 'sound', 'vibrate', 'autoAdvance', 'wakeLock'];   // not notifications: that permission belongs to this browser
+const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 function exportRecipes() {
-  if (!state.userRecipes.length) { showToast(T('You have no recipes of your own to export yet.')); return; }
-  const payload = { app: 'brew-calculator', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), userRecipes: state.userRecipes };
+  const settings = {};
+  EXPORT_SETTINGS.forEach((k) => { settings[k] = state.settings[k]; });
+  const payload = { app: 'brew-calculator', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), userRecipes: state.userRecipes, favorites: state.favorites, settings };
   const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url; a.download = `brew-calculator-recipes-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast(T('Exported {n} recipe(s).', { n: state.userRecipes.length }));
+  writeMeta({ lastBackup: Date.now() }); renderBackupInfo(); requestPersist();
+  showToast(state.userRecipes.length ? T('Exported {n} recipe(s).', { n: state.userRecipes.length }) : T('Exported your favorites and settings.'));
 }
 async function importRecipes(file) {
   if (!file) return;
   if (file.size > MAX_IMPORT_BYTES) { showToast(T('This file is too large to import.')); return; }
   let raw;
   try { raw = JSON.parse(await file.text()); } catch (e) { showToast(T('This file is not valid JSON.')); return; }
-  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.userRecipes)) { showToast(T('This file does not contain Brew Calculator recipes.')); return; }
-  const list = raw.userRecipes.slice(0, MAX_IMPORT_RECIPES);
-  if (!list.length) { showToast(T('No recipes found in this file.')); return; }
-  const { data } = BrewLogic.sanitizeStored({ userRecipes: list }, state.recipes.map((r) => r.id));   // validates each recipe; clashing ids get new ones
-  const seen = new Set(state.userRecipes.map(canon));
-  const fresh = data.userRecipes.filter((r) => { const k = canon(r); if (seen.has(k)) return false; seen.add(k); return true; });
-  const skipped = raw.userRecipes.length - fresh.length;
-  if (fresh.length) {
-    fresh.forEach((r) => { r.builtIn = false; state.userRecipes.push(r); });
-    rebuildRecipes(); refreshCalcAfterRecipeChange(); saveState(); render();
+  if (!isObj(raw) || (!Array.isArray(raw.userRecipes) && !Array.isArray(raw.favorites) && !isObj(raw.settings))) { showToast(T('This file does not contain Brew Calculator recipes.')); return; }
+  const all = Array.isArray(raw.userRecipes) ? raw.userRecipes : [], items = all.slice(0, MAX_IMPORT_RECIPES);
+  // recipes: validated one by one so a bad entry never hides the rest, and old ids can be mapped to new ones for favorites
+  const taken = new Set(state.recipes.map((r) => r.id)), seen = new Map(state.userRecipes.map((r) => [canon(r), r.id])), idMap = new Map(), fresh = [];
+  items.forEach((item) => {
+    const oldId = isObj(item) && typeof item.id === 'string' ? item.id : null;
+    const r = BrewLogic.sanitizeStored({ userRecipes: [item] }, [...taken]).data.userRecipes[0];
+    if (!r) return;
+    const k = canon(r);
+    if (seen.has(k)) { if (oldId) idMap.set(oldId, seen.get(k)); return; }   // identical recipe already saved
+    r.builtIn = false; taken.add(r.id); seen.set(k, r.id); if (oldId) idMap.set(oldId, r.id); fresh.push(r);
+  });
+  fresh.forEach((r) => state.userRecipes.push(r));
+  if (fresh.length) rebuildRecipes();
+  let favAdded = 0;
+  if (Array.isArray(raw.favorites)) raw.favorites.slice(0, 500).forEach((id) => {
+    const real = typeof id === 'string' ? (idMap.get(id) || id) : null;
+    if (real && getRecipe(real) && !state.favorites.includes(real)) { state.favorites.push(real); favAdded++; }
+  });
+  let patch = {};
+  if (isObj(raw.settings)) {
+    const clean = BrewLogic.sanitizeStored({ settings: raw.settings }, []).data.settings;
+    EXPORT_SETTINGS.forEach((k) => { if (k in raw.settings && clean[k] !== undefined && clean[k] !== null && clean[k] !== state.settings[k]) patch[k] = clean[k]; });   // only values that passed validation
+    const ok = Object.keys(patch).length && await askConfirm(T('Apply the saved settings?'), T('This file also contains settings such as language, units and timer options. Replace your current settings with them?'), T('Apply'));
+    if (!ok) patch = {};
   }
-  const n = fresh.length;
-  showToast(!n ? T('No new recipes were imported. Skipped {s} (invalid or already saved).', { s: skipped })
-    : skipped ? T('Imported {n} recipe(s). Skipped {s} (invalid or already saved).', { n, s: skipped }) : T('Imported {n} recipe(s).', { n }));
+  const settingsApplied = Object.keys(patch).length > 0;
+  if (settingsApplied) Object.assign(state.settings, patch);
+  if (fresh.length || favAdded || settingsApplied) {
+    refreshCalcAfterRecipeChange(); saveState();
+    if (settingsApplied) {
+      applySettings();
+      if ('units' in patch || 'waterMeasure' in patch) onSettingChanged('units');
+      if ('language' in patch) onSettingChanged('language');
+      if ('wakeLock' in patch) onSettingChanged('wakeLock');
+    }
+    render(); if (fresh.length) requestPersist();
+  }
+  const n = fresh.length, skipped = all.length - n;
+  const parts = [
+    n ? (skipped ? T('Imported {n} recipe(s). Skipped {s} (invalid or already saved).', { n, s: skipped }) : T('Imported {n} recipe(s).', { n }))
+      : all.length ? T('No new recipes were imported. Skipped {s} (invalid or already saved).', { s: skipped }) : '',
+    favAdded ? T('{n} favorite(s) restored.', { n: favAdded }) : '',
+    settingsApplied ? T('Settings applied.') : ''].filter(Boolean);
+  showToast(parts.length ? parts.join(' ') : (all.length || Array.isArray(raw.favorites) || isObj(raw.settings) ? T('Nothing new to import from this file.') : T('No recipes found in this file.')));
 }
 
 /* ---------- Calendar reminder (.ics): a reliable alert for long brews, independent of this page staying alive ---------- */
@@ -2126,6 +2211,8 @@ function addReminder() {
 }
 
 function bindRecipeEvents() {
+  $('btn-nudge-export').addEventListener('click', exportRecipes);
+  $('btn-nudge-later').addEventListener('click', () => { writeMeta({ snoozedAt: Date.now() }); renderBackupInfo(); });
   $('btn-ics').addEventListener('click', addReminder);
   $('btn-export').addEventListener('click', exportRecipes);
   $('btn-import').addEventListener('click', () => $('import-file').click());
@@ -2156,7 +2243,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     let updating = false;   // reload only after the person chose to update, never on the very first install
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (updating) location.reload(); });
     let reg;
-    try { reg = await navigator.serviceWorker.register('sw.js'); } catch (e) { return; }
+    try { reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }); } catch (e) { return; }
     const offer = (worker) => { if (worker && navigator.serviceWorker.controller) showUpdateBanner(worker, () => { updating = true; }); };
     offer(reg.waiting);
     reg.addEventListener('updatefound', () => {

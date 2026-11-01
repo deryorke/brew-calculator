@@ -1,11 +1,12 @@
 /* Brew Calculator service worker: offline app shell.
    Bump CACHE_VERSION whenever index.html or any listed file changes, so installed copies update. */
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v11';
 const CACHE = `brew-calculator-${CACHE_VERSION}`;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));   // no skipWaiting: the page offers the update, and the person decides when
+  // cache: 'reload' skips the host's HTTP cache, so a new version never precaches stale copies of its own files
+  event.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(new Request(u, { cache: 'reload' }))))));   // no skipWaiting: the page offers the update, and the person decides when
 });
 
 self.addEventListener('activate', (event) => {
@@ -21,7 +22,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   if (req.mode === 'navigate') {   // network first so a new version is picked up; cached copy when offline
     event.respondWith(
-      fetch(req).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put('./index.html', copy)); } return res; })
+      fetch(req, { cache: 'no-cache' }).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put('./index.html', copy)); } return res; })
         .catch(() => caches.match('./index.html').then((hit) => hit || caches.match('./')))
     );
     return;
