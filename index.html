@@ -454,15 +454,33 @@ label.switch{color:var(--text);font-weight:500}
     return h ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
   }
 
+  /* ---------- Input hygiene shared by the calculator, the recipe form and stored data ---------- */
+  // Decimal numbers only: digits with one optional "." or ",". Rejects hex (0x10), exponents (1e2), signs, units and spaces.
+  const DECIMAL = /^-?(\d+([.,]\d*)?|[.,]\d+)$/;
+  const parseDecimal = (raw) => { const t = String(raw === null || raw === undefined ? '' : raw).trim(); return DECIMAL.test(t) ? Number(t.replace(',', '.')) : NaN; };
+  // Text fields: drop control characters and invisible spoofing marks (zero-width space, BOM, bidi overrides), collapse whitespace.
+  const cleanText = (v) => String(v === null || v === undefined ? '' : v)
+    .replace(/[\u200B\u2060\uFEFF\u202A-\u202E\u2066-\u2069]/g, '')   // invisible or direction-spoofing marks; ZWJ/ZWNJ stay so emoji and Persian text survive
+    .replace(/[\p{Cc}\u2028\u2029]/gu, ' ').replace(/\s+/g, ' ').trim();
+  const hasVisible = (t) => /[\p{L}\p{N}\p{P}\p{S}]/u.test(t);
+  // Estimated brew time: "2:30", "1:02:30" or a range "2:30–3:00". Returns [low, high] in seconds, or null if it is not that shape.
+  function parseEstimate(text) {
+    const one = '(\\d{1,2}(?::[0-5]\\d){1,2})', m = String(text).trim().match(new RegExp('^' + one + '(?:\\s*[-–—]\\s*' + one + ')?$'));
+    if (!m) return null;
+    const secs = (t) => t.split(':').map(Number).reduce((a, x) => a * 60 + x, 0), lo = secs(m[1]), hi = m[2] ? secs(m[2]) : lo;
+    return hi >= lo ? [lo, hi] : null;
+  }
+
   /* ---------- Calculator ---------- */
-  const LIMITS = { dose: 5000, water: 100000, ratio: 100 };
+  const LIMITS = { dose: 5000, water: 100000, ratio: 100 }, MIN_RATIO = 1;
   const LABELS = { dose: 'Coffee dose', water: 'Water', ratio: 'Ratio' };
-  function parseField(raw, label, max) {
+  function parseField(raw, label, max, min) {
     if (raw === null || raw === undefined || String(raw).trim() === '') return { error: `${label} is empty. Enter a number greater than 0.` };
-    const n = Number(String(raw).trim().replace(',', '.'));
+    const n = parseDecimal(raw);
     if (!Number.isFinite(n)) return { error: `${label} must be a valid number.` };
     if (n < 0) return { error: `${label} cannot be negative.` };
     if (n === 0) return { error: `${label} must be greater than 0.` };
+    if (min && n < min) return { error: 'Ratio must be at least 1 (1:1 means equal weights of coffee and water).' };
     if (n > max) return { error: `${label} is too large.` };
     return { value: n };
   }
@@ -471,17 +489,18 @@ label.switch{color:var(--text);font-weight:500}
     const need = changed === 'water' ? ['water', 'ratio'] : ['dose', 'ratio'];
     const v = {};
     for (const k of need) {
-      const p = parseField(raw[k], LABELS[k], LIMITS[k]);
+      const p = parseField(raw[k], LABELS[k], LIMITS[k], k === 'ratio' ? MIN_RATIO : 0);
       if (p.error) return { ok: false, field: k, error: p.error };
       v[k] = p.value;
     }
     let dose, water;
-    if (changed === 'water') { water = v.water; dose = round(water / v.ratio, 2); }
-    else { dose = v.dose; water = round(dose * v.ratio, 1); }
+    const ratio = round(v.ratio, 2);   // every field is stored at a fixed precision, so what you see is what is saved
+    if (changed === 'water') { water = round(v.water, 1); dose = round(water / ratio, 2); }
+    else { dose = round(v.dose, 2); water = round(dose * ratio, 1); }
     if (!(dose > 0) || !(water > 0) || dose > LIMITS.dose || water > LIMITS.water) {
       return { ok: false, field: changed, error: 'These values give a result that is out of range. Adjust them.' };
     }
-    return { ok: true, dose, water, ratio: v.ratio };
+    return { ok: true, dose, water, ratio };
   }
 
   /* Returns NEW steps; the original recipe is never mutated. Targets stay cumulative. */
@@ -507,6 +526,7 @@ label.switch{color:var(--text);font-weight:500}
   /* Pouring-style methods need cumulative, non-decreasing targets that end at the total water.
      Espresso and Custom are exempt: their targets only have to stay within 0..total water. */
   const METHODS = ['V60 / Pour Over', 'French Press', 'AeroPress', 'Espresso', 'Cold Brew', 'Custom'];
+  const HOT_METHODS = ['V60 / Pour Over', 'French Press', 'AeroPress', 'Espresso'];
   const GRINDS = ['Extra fine', 'Fine', 'Medium-fine', 'Medium', 'Medium-coarse', 'Coarse', 'Extra coarse'];
   const POURING_EXEMPT = ['Espresso', 'Custom'];
   const isPouring = (method) => !POURING_EXEMPT.includes(method);
@@ -622,21 +642,22 @@ label.switch{color:var(--text);font-weight:500}
     d = d || {};
     const imp = units === 'imperial', wU = imp ? 'oz' : 'g', errors = [];
     const add = (field, message) => errors.push({ field, message });
-    const num = (s) => (s === null || s === undefined || String(s).trim() === '' ? NaN : Number(String(s).trim().replace(',', '.')));
+    const num = parseDecimal;
     const pos = (v) => Number.isFinite(v) && v > 0;
     const toG = (v) => round(imp ? ozToG(v) : v, 2);
-    const name = String(d.name || '').trim();
-    if (!name) add('name', 'Enter a recipe name.');
+    const name = cleanText(d.name);
+    if (!name || !hasVisible(name)) add('name', 'Enter a recipe name.');
     else if (name.length > 60) add('name', 'Recipe name must be 60 characters or fewer.');
     if (!METHODS.includes(d.method)) add('method', 'Choose a brewing method.');
     if (!GRINDS.includes(d.grind)) add('grind', 'Choose a grind size.');
     const dose = num(d.dose), water = num(d.water), ratio = num(d.ratio), tIn = num(d.temp);
     if (!pos(dose)) add('dose', `Coffee dose must be a number greater than 0 ${wU}.`);
     if (!pos(water)) add('water', `Total water must be a number greater than 0 ${wU}.`);
-    const ratioOk = pos(ratio) && ratio <= 100;
-    if (!ratioOk) add('ratio', 'Ratio must be a number above 0 and up to 100 (for example 16 for 1:16).');
+    const ratioOk = Number.isFinite(ratio) && ratio >= MIN_RATIO && ratio <= 100;
+    if (!ratioOk) add('ratio', 'Ratio must be between 1 and 100 (for example 16 for 1:16).');
     const tempC = imp ? fToC(tIn) : tIn;
     if (!Number.isFinite(tIn) || tempC < 0 || tempC > 100) add('temp', imp ? 'Temperature must be between 32 and 212 °F.' : 'Temperature must be between 0 and 100 °C.');
+    else if (HOT_METHODS.includes(d.method) && tempC < 50) add('temp', 'Hot brewing methods need water of at least 50 °C (122 °F). Choose Cold Brew or Custom for cooler water.');
     if (pos(dose) && pos(water) && ratioOk && Math.abs(water / dose - ratio) > ratio * 0.02 + 0.01) {
       add('ratio', `Ratio 1:${ratio} does not match ${dose} ${wU} coffee and ${water} ${wU} water (that is about 1:${round(water / dose, 2)}). Change one of them.`);
     }
@@ -649,8 +670,8 @@ label.switch{color:var(--text);font-weight:500}
       s = s || {};
       const n = i + 1, f = (k) => `step-${i}-${k}`;
       lastT = null;
-      const sName = String(s.name || '').trim();
-      if (!sName) add(f('name'), `Step ${n}: enter a step name.`);
+      const sName = cleanText(s.name);
+      if (!sName || !hasVisible(sName)) add(f('name'), `Step ${n}: enter a step name.`);
       else if (sName.length > 60) add(f('name'), `Step ${n}: the name must be 60 characters or fewer.`);
       const dur = num(s.duration);
       if (!Number.isFinite(dur)) add(f('duration'), `Step ${n}: enter the duration in seconds.`);
@@ -664,16 +685,25 @@ label.switch{color:var(--text);font-weight:500}
       else if (pos(water) && t > water + 1e-9) add(f('target'), `Step ${n}: target water (${t} ${wU}) cannot be more than the total water (${water} ${wU}).`);
       else if (strict && t < prev - 1e-9) add(f('target'), `Step ${n}: target (${t} ${wU}) is lower than the previous step (${prev} ${wU}). Targets are running totals, so each step should be the same or higher.`);
       else { if (strict) prev = t; lastT = t; }
-      const instruction = String(s.instruction || '').trim();
+      const instruction = cleanText(s.instruction);
       if (instruction.length > 200) add(f('instruction'), `Step ${n}: the instruction must be 200 characters or fewer.`);
       out.push({ name: sName, duration: dur, targetWater: Number.isFinite(t) ? toG(t) : NaN, instruction });
     });
     if (strict && lastT !== null && pos(water) && Math.abs(lastT - water) > 1e-9) {
       add(`step-${steps.length - 1}-target`, `The last step must reach the total water (${water} ${wU}); it currently ends at ${lastT} ${wU}.`);
     }
+    const estimate = cleanText(d.estimate).slice(0, 30);
+    if (estimate) {
+      const est = parseEstimate(estimate);
+      if (!est) add('estimate', 'Estimated brew time must look like 2:30 or 2:30–3:00 (minutes:seconds).');
+      else if (!errors.some((e) => e.field.startsWith('step-'))) {
+        const total = out.reduce((a, st) => a + st.duration, 0);
+        if (total < est[0] * 0.6 - 15 || total > est[1] * 1.6 + 15) add('estimate', `Estimated brew time (${estimate}) does not match the steps, which add up to ${formatTime(total)}. Adjust the estimate or the step durations.`);
+      }
+    }
     if (errors.length) return { errors, recipe: null };
     return { errors, recipe: { name, method: d.method, dose: toG(dose), water: toG(water), ratio: round(ratio, 2), temp: round(tempC, 1),
-      grind: d.grind, estimate: String(d.estimate || '').trim().slice(0, 30), steps: out, builtIn: false } };
+      grind: d.grind, estimate, steps: out, builtIn: false } };
   }
 
   /* ---------- Stored data: versioned, defensive ---------- */
@@ -688,9 +718,9 @@ label.switch{color:var(--text);font-weight:500}
   function cleanRecipe(r) {
     if (!r || typeof r !== 'object' || !Array.isArray(r.steps)) return null;
     const num = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
-    const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+    const str = (v, max) => (typeof v === 'string' ? cleanText(v).slice(0, max) : '');
     const dose = num(r.dose, 0), water = num(r.water, 0), temp = num(r.temp, 92);
-    const c = { id: typeof r.id === 'string' ? r.id : '', name: str(r.name, 60), method: METHODS.includes(r.method) ? r.method : 'Custom', dose, water,
+    const c = { id: typeof r.id === 'string' ? r.id : '', name: str(r.name, 60) || (typeof r.name === 'string' && r.name.trim() ? 'Untitled recipe' : ''), method: METHODS.includes(r.method) ? r.method : 'Custom', dose, water,
       ratio: num(r.ratio, 0) > 0 ? r.ratio : (dose > 0 ? round(water / dose, 2) : 0), temp: temp >= 0 && temp <= 100 ? temp : 92,
       grind: GRINDS.includes(r.grind) ? r.grind : 'Medium', estimate: str(r.estimate, 30), builtIn: false,
       steps: r.steps.map((s, i) => { s = s || {}; return { name: str(s.name, 60) || `Step ${i + 1}`, duration: num(s.duration, 0), targetWater: num(s.targetWater, -1), instruction: str(s.instruction, 200) }; }) };
@@ -725,7 +755,7 @@ label.switch{color:var(--text);font-weight:500}
     return { data: out, warnings };
   }
 
-  const api = { METHODS, GRINDS, isPouring, OZ_G, gToOz, ozToG, cToF, fToC, parseRecipeDraft, SCHEMA_VERSION, sanitizeStored, newId, round, formatNumber, formatRatio, formatTime, calcFrom, scaleSteps, normalizeRecipe, validateRecipe, buildTimeline, locate, createTimerEngine };
+  const api = { METHODS, GRINDS, isPouring, OZ_G, gToOz, ozToG, cToF, fToC, parseRecipeDraft, SCHEMA_VERSION, sanitizeStored, newId, round, formatNumber, formatRatio, formatTime, calcFrom, scaleSteps, normalizeRecipe, validateRecipe, buildTimeline, locate, createTimerEngine, parseDecimal, cleanText, hasVisible, parseEstimate };
   root.BrewLogic = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -738,6 +768,12 @@ label.switch{color:var(--text);font-weight:500}
    TM(text)      translates an already-built message (logic-layer validation text) by matching its template.
    Internal data (method names, grind sizes, saved recipes) always stays in English; only the display is translated. */
 const I18N = { lang: 'en', dict: {
+ "Untitled recipe": "Resep tanpa judul",
+ "Ratio must be between 1 and 100 (for example 16 for 1:16).": "Rasio harus antara 1 dan 100 (misalnya 16 untuk 1:16).",
+ "Ratio must be at least 1 (1:1 means equal weights of coffee and water).": "Rasio minimal 1 (1:1 berarti berat kopi dan air sama).",
+ "Hot brewing methods need water of at least 50 °C (122 °F). Choose Cold Brew or Custom for cooler water.": "Metode seduh panas butuh air minimal 50 °C (122 °F). Pilih Cold Brew atau Custom untuk air yang lebih dingin.",
+ "Estimated brew time must look like 2:30 or 2:30–3:00 (minutes:seconds).": "Perkiraan waktu seduh harus berbentuk 2:30 atau 2:30–3:00 (menit:detik).",
+ "Estimated brew time ({est}) does not match the steps, which add up to {total}. Adjust the estimate or the step durations.": "Perkiraan waktu seduh ({est}) tidak cocok dengan langkah-langkahnya yang berjumlah {total}. Sesuaikan perkiraan atau durasi langkah.",
  "Version: {v}": "Versi: {v}",
  "Exported your favorites and settings.": "Favorit dan pengaturanmu diekspor.",
  "Apply the saved settings?": "Terapkan pengaturan dari file?",
@@ -1029,7 +1065,6 @@ const I18N = { lang: 'en', dict: {
  "Choose a grind size.": "Pilih ukuran gilingan.",
  "Coffee dose must be a number greater than 0 {u}.": "Dosis kopi harus berupa angka lebih besar dari 0 {u}.",
  "Total water must be a number greater than 0 {u}.": "Total air harus berupa angka lebih besar dari 0 {u}.",
- "Ratio must be a number above 0 and up to 100 (for example 16 for 1:16).": "Rasio harus berupa angka di atas 0 hingga 100 (misalnya 16 untuk 1:16).",
  "Temperature must be between 32 and 212 °F.": "Suhu harus antara 32 dan 212 °F.",
  "Temperature must be between 0 and 100 °C.": "Suhu harus antara 0 dan 100 °C.",
  "Ratio 1:{r} does not match {d} {u} coffee and {w} {u} water (that is about 1:{x}). Change one of them.": "Rasio 1:{r} tidak sesuai dengan kopi {d} {u} dan air {w} {u} (sekitar 1:{x}). Ubah salah satunya.",
