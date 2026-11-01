@@ -1,6 +1,7 @@
 /* Brew Calculator service worker: offline app shell.
-   Bump CACHE_VERSION whenever index.html or any listed file changes, so installed copies update. */
-const CACHE_VERSION = 'v11';
+   CACHE_VERSION is stamped automatically from the app's files by tools/stamp-version.py; run it before each upload
+   so installed copies notice the change. Editing the number by hand also works. */
+const CACHE_VERSION = 'cee385cdba1';
 const CACHE = `brew-calculator-${CACHE_VERSION}`;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 
@@ -45,4 +46,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 /* The page asks for activation once the person taps "Update now". */
-self.addEventListener('message', (event) => { if (event.data === 'SKIP_WAITING') self.skipWaiting(); });
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  else if (event.data === 'VERSION' && event.ports[0]) event.ports[0].postMessage({ version: CACHE_VERSION });   // lets the Settings page show which version is running
+});

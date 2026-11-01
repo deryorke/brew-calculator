@@ -392,7 +392,8 @@ label.switch{color:var(--text);font-weight:500}
          <button class="btn" id="btn-import" type="button">Import recipes</button>
          <input type="file" id="import-file" accept=".json,application/json" hidden>
        </div>
-             <p class="muted small">Your recipes, favorites and settings are saved only in this browser on this device. They are not synced to other devices or browsers.</p>
+             <p id="app-version" class="muted small" hidden></p>
+      <p class="muted small">Your recipes, favorites and settings are saved only in this browser on this device. They are not synced to other devices or browsers.</p>
     </div>
   </section>
   <section id="view-recipe-detail" class="view" data-view-name="recipe-detail" hidden>
@@ -737,6 +738,7 @@ label.switch{color:var(--text);font-weight:500}
    TM(text)      translates an already-built message (logic-layer validation text) by matching its template.
    Internal data (method names, grind sizes, saved recipes) always stays in English; only the display is translated. */
 const I18N = { lang: 'en', dict: {
+ "Version: {v}": "Versi: {v}",
  "Exported your favorites and settings.": "Favorit dan pengaturanmu diekspor.",
  "Apply the saved settings?": "Terapkan pengaturan dari file?",
  "This file also contains settings such as language, units and timer options. Replace your current settings with them?": "File ini juga berisi pengaturan seperti bahasa, satuan, dan opsi timer. Ganti pengaturanmu saat ini dengan isinya?",
@@ -1308,6 +1310,7 @@ function render() {
   if (state.view === 'recipe-detail') renderDetail();
   if (state.view === 'timer') renderTimer();
   if (state.view === 'recipes' || state.view === 'settings') renderBackupInfo();
+  if (state.view === 'settings') showAppVersion();
 }
 
 /* ---------- Units & feedback (Phase 3). Internal values are ALWAYS grams and °C; conversion happens only for display/input. ---------- */
@@ -2070,6 +2073,22 @@ function handleAction(action, ds) {
 /* ---------- Export / import (JSON backup of your own recipes) ---------- */
 const MAX_IMPORT_BYTES = 1048576, MAX_IMPORT_RECIPES = 200;
 const canon = (r) => { const { id, builtIn, basedOn, ...rest } = r; return JSON.stringify(rest, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v)); };
+/* ---------- Which version is running? Asked of the active service worker, so it is the one actually in use ---------- */
+function askVersion() {
+  return new Promise((resolve) => {
+    const c = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+    if (!c) { resolve(null); return; }
+    const t = setTimeout(() => resolve(null), 1500), ch = new MessageChannel();
+    ch.port1.onmessage = (e) => { clearTimeout(t); resolve((e.data && e.data.version) || null); };
+    try { c.postMessage('VERSION', [ch.port2]); } catch (err) { clearTimeout(t); resolve(null); }
+  });
+}
+async function showAppVersion() {
+  const v = await askVersion(), el = $('app-version');
+  el.hidden = !v;
+  if (v) el.textContent = T('Version: {v}', { v });
+}
+
 /* ---------- Data safety: ask the browser to keep our data, and nudge toward a backup ---------- */
 const META_KEY = 'brewCalculator.meta.v1', DAY_MS = 86400000, BACKUP_EVERY_DAYS = 30, SNOOZE_DAYS = 14;
 function readMeta() { const m = readStored(META_KEY); return m && typeof m === 'object' && !Array.isArray(m) ? m : {}; }
