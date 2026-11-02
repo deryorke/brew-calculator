@@ -236,11 +236,27 @@ label.switch{color:var(--text);font-weight:500}
 .update-actions{display:flex;gap:.6rem}
 .update-actions .btn{flex:1}
 @media (min-width:768px){.update-banner{bottom:5rem}}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:fixed;left:.75rem;top:-4rem;z-index:30;min-height:44px;padding:.6rem 1rem;border-radius:12px;border:2px solid var(--accent);background:var(--surface);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.skip-link:focus{top:.75rem}
+#app:focus{outline:none}
+h1.page-title{letter-spacing:-.02em}
+h1.view-title{font-size:1.5rem;margin-top:1.5rem;letter-spacing:-.02em}
+.chip{min-height:44px}
+.icon-btn{width:44px;height:44px}
+.brand{min-height:44px}
+main,.nav{overflow-wrap:break-word}   /* break-word, not anywhere: anywhere would also shrink buttons to one letter per line */
+main :is(div,label,section,article,span,p,li){min-width:0}
+.nav button{min-width:0;min-height:52px;font-size:min(.8rem,max(10.5px,3.3vw))}   /* bottom-bar labels grow with the user's text size, but only until five of them no longer fit across the screen */
+.item{flex-wrap:wrap}
+.item>div:first-child{flex:1 1 12rem;min-width:0}
+.item-actions{flex-wrap:wrap}
 .backup-actions{display:flex;flex-wrap:wrap;gap:.6rem}
 .backup-actions .btn{flex:1 1 140px}
 </style>
 </head>
 <body>
+<button class="skip-link" id="skip-link" type="button">Skip to content</button>
 <header class="topbar">
   <button class="brand" data-view="home" aria-label="Brew Calculator home"><span class="brand-mark" aria-hidden="true">B</span><span class="brand-name">BREW<span>CALCULATOR</span></span></button>
   <nav class="nav" aria-label="Main">
@@ -253,7 +269,7 @@ label.switch{color:var(--text);font-weight:500}
   <button class="icon-btn" id="theme-quick" type="button" aria-label="Toggle light and dark mode">◐</button>
 </header>
 
-<main id="app">
+<main id="app" tabindex="-1">
   <section id="view-home" class="view" data-view-name="home">
     <div class="hero">
       <div class="hero-copy">
@@ -267,7 +283,7 @@ label.switch{color:var(--text);font-weight:500}
         </div>
         <div class="hero-meta"><span class="status-dot"></span> A better brew, one step at a time</div>
       </div>
-      <div class="hero-art" aria-label="Illustration of a pour-over coffee setup" role="img">
+      <div class="hero-art" aria-hidden="true" aria-label="Illustration of a pour-over coffee setup" role="img">
               <div class="sun-disc"></div>
               <div class="art-label art-label-top">SLOW DOWN<br>AND POUR</div>
               <div class="coffee-bean bean-one"></div><div class="coffee-bean bean-two"></div>
@@ -285,7 +301,7 @@ label.switch{color:var(--text);font-weight:500}
   </section>
 
   <section id="view-calculator" class="view" data-view-name="calculator" hidden>
-    <div class="page-head"><div class="eyebrow">Precision, made simple</div><h2 class="page-title">Coffee <em>calculator.</em></h2><p class="lead">Adjust your coffee, water, or ratio. The other values follow the one you changed.</p></div>
+    <div class="page-head"><div class="eyebrow">Precision, made simple</div><h1 class="page-title">Coffee <em>calculator.</em></h1><p class="lead">Adjust your coffee, water, or ratio. The other values follow the one you changed.</p></div>
     <form id="calc-form" class="card form" onsubmit="return false">
       <label>Brewing Method
         <select id="calc-method"></select></label>
@@ -310,7 +326,7 @@ label.switch{color:var(--text);font-weight:500}
   </section>
 
   <section id="view-recipes" class="view" data-view-name="recipes" hidden>
-    <div class="row page-head"><div><div class="eyebrow">The brew library</div><h2 class="page-title">Recipes for your <em>ritual.</em></h2><p class="lead">Built-in starting points and your own recipes, all in one place.</p></div><button class="btn primary" id="btn-create-recipe">＋ Create Recipe</button></div>
+    <div class="row page-head"><div><div class="eyebrow">The brew library</div><h1 class="page-title">Recipes for your <em>ritual.</em></h1><p class="lead">Built-in starting points and your own recipes, all in one place.</p></div><button class="btn primary" id="btn-create-recipe">＋ Create Recipe</button></div>
     <div id="backup-nudge" class="card note" hidden>
       <p id="backup-nudge-text"></p>
       <div class="update-actions"><button class="btn primary" id="btn-nudge-export" type="button">Export now</button><button class="btn" id="btn-nudge-later" type="button">Remind me later</button></div>
@@ -323,20 +339,20 @@ label.switch{color:var(--text);font-weight:500}
   <section id="view-timer" class="view" data-view-name="timer" hidden>
     <div class="timer-head"><div class="eyebrow" style="justify-content:center">Take it one pour at a time</div>
       <p id="timer-method" class="muted">No method</p>
-      <h2 id="timer-recipe">No recipe selected</h2>
+      <h1 id="timer-recipe" class="view-title">No recipe selected</h1>
     </div>
     <div id="timer-live" class="card timer-card">
       <div id="timer-display" class="timer-display" role="timer">00:00</div>
       <p id="timer-step" class="step-name">Ready</p>
       <p id="timer-pour" class="pour">Pour to 0 g</p>
-      <div class="progress" title="Step progress"><div id="timer-step-progress" class="bar"></div></div>
+      <div class="progress" id="step-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="timer-step-progress" class="bar"></div></div>
       <p id="timer-instruction" class="instruction">Choose a recipe to see its steps.</p>
       <p id="timer-next" class="next muted"></p>
       <div class="stats">
         <div><span class="muted">Target Water (total)</span><strong id="timer-target">0 g</strong></div>
         <div><span class="muted">Overall</span><strong id="timer-overall-text">00:00 / 00:00</strong></div>
       </div>
-      <div class="progress" title="Overall progress"><div id="timer-progress" class="bar"></div></div>
+      <div class="progress" id="overall-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="timer-progress" class="bar"></div></div>
       <div class="controls">
         <button class="btn primary" id="btn-start" disabled>Start</button>
         <button class="btn" id="btn-pause" disabled>Pause</button>
@@ -363,7 +379,7 @@ label.switch{color:var(--text);font-weight:500}
   </section>
 
   <section id="view-settings" class="view" data-view-name="settings" hidden>
-    <div class="page-head"><div class="eyebrow">Make it yours</div><h2 class="page-title">Your brew <em>settings.</em></h2><p class="lead">Preferences are saved in this browser.</p></div>
+    <div class="page-head"><div class="eyebrow">Make it yours</div><h1 class="page-title">Your brew <em>settings.</em></h1><p class="lead">Preferences are saved in this browser.</p></div>
     <div class="card form">
       <label>Language / Bahasa
         <select id="set-language"><option value="en">English</option><option value="id">Bahasa Indonesia</option></select></label>
@@ -402,7 +418,7 @@ label.switch{color:var(--text);font-weight:500}
   </section>
 
   <section id="view-recipe-form" class="view" data-view-name="recipe-form" hidden>
-    <h2 id="form-title">Create Recipe</h2>
+    <h1 id="form-title" class="view-title">Create Recipe</h1>
     <p id="form-banner" class="note" hidden></p>
     <div id="form-errors" class="error" role="alert" hidden></div>
     <form id="recipe-form" class="card form" onsubmit="return false" novalidate>
@@ -435,6 +451,7 @@ label.switch{color:var(--text);font-weight:500}
   </div>
 </dialog>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="update-banner" class="update-banner" role="status" aria-live="polite" hidden>
   <p id="update-text">A new version is available.</p>
   <div class="update-actions"><button class="btn primary" id="btn-update" type="button">Update now</button><button class="btn" id="btn-update-later" type="button">Later</button></div>
@@ -768,6 +785,7 @@ label.switch{color:var(--text);font-weight:500}
    TM(text)      translates an already-built message (logic-layer validation text) by matching its template.
    Internal data (method names, grind sizes, saved recipes) always stays in English; only the display is translated. */
 const I18N = { lang: 'en', dict: {
+ "Skip to content": "Lewati ke konten",
  "Untitled recipe": "Resep tanpa judul",
  "Ratio must be between 1 and 100 (for example 16 for 1:16).": "Rasio harus antara 1 dan 100 (misalnya 16 untuk 1:16).",
  "Ratio must be at least 1 (1:1 means equal weights of coffee and water).": "Rasio minimal 1 (1:1 berarti berat kopi dan air sama).",
@@ -1329,6 +1347,7 @@ function applySettings() {
   $('set-wakelock').checked = s.wakeLock;
   syncAlertControls();
   renderBackupInfo();
+  $('step-progress-track').setAttribute('aria-label', T('Step progress')); $('overall-progress-track').setAttribute('aria-label', T('Overall progress'));
   if (!('wakeLock' in navigator)) { $('set-wakelock').disabled = true; $('wakelock-note').hidden = false; }
   $('units-note').textContent = isImperial()
     ? T('Imperial: ounces by weight (1 oz = 28.3495 g) and °F. Recipes keep their original values; only the display changes.')
@@ -1346,6 +1365,7 @@ function render() {
   if (state.view === 'timer') renderTimer();
   if (state.view === 'recipes' || state.view === 'settings') renderBackupInfo();
   if (state.view === 'settings') showAppVersion();
+  updateTitle();
 }
 
 /* ---------- Units & feedback (Phase 3). Internal values are ALWAYS grams and °C; conversion happens only for display/input. ---------- */
@@ -1573,11 +1593,18 @@ function timerAction(name) {
   saveBrew();
 }
 function handleSnapshot(snap) {
-  if (snap.events.length) saveBrew();
+  if (snap.events.length) { saveBrew(); speakStep(snap); }
   if (snap.events.includes('complete')) { stopTicker(); releaseWakeLock(); beep(3, 988); alertUser('complete', snap); }
   else if (snap.events.includes('step')) { beep(1, 880); alertUser('step', snap); }
   else if (snap.events.includes('stepEnd')) { beep(2, 880); alertUser('stepEnd', snap); }
   paintTimer(snap);
+}
+function speakStep(snap) {
+  const r = state.activeBrew; if (!r) return;
+  const step = r.steps[snap.index];
+  if (snap.events.includes('complete')) announce(T('Brew complete'));
+  else if (snap.events.includes('stepEnd')) announce(T('Step finished: {name}', { name: sn(step, r) }));
+  else if (snap.events.includes('step')) announce(`${sn(step, r)}. ${instructionText(step)}`);
 }
 /* ---------- Vibration and notifications (best effort: they only fire while the page is alive) ---------- */
 const VIBRATE_PATTERNS = { step: [200], stepEnd: [200, 100, 200], complete: [400, 150, 400, 150, 400] };
@@ -1636,8 +1663,8 @@ function paintTimerEmpty() {
   $('timer-next').textContent = '';
   $('timer-status').textContent = '';
   $('timer-unit-note').hidden = true;
-  $('timer-step-progress').style.width = '0';
-  $('timer-progress').style.width = '0';
+  $('timer-step-progress').style.width = '0'; $('step-progress-track').setAttribute('aria-valuenow', 0);
+  $('timer-progress').style.width = '0'; $('overall-progress-track').setAttribute('aria-valuenow', 0);
   $('timer-steps').innerHTML = `<li class="empty">${T('Pick a recipe from Recipes and tap Brew, or use the Calculator.')}</li>`;
   state.stepsKey = '';
   setTimerButtons('none');
@@ -1662,7 +1689,9 @@ function paintTimer(snap) {
   $('timer-instruction').textContent = instructionText(s);
   $('timer-next').textContent = next ? T('Next: {name} · target total {target}', { name: sn(next, r), target: wt(next.targetWater, 'water') }) : T('Last step');
   $('timer-step-progress').style.width = (snap.stepElapsedMs / snap.stepDurationMs * 100).toFixed(1) + '%';
+  $('step-progress-track').setAttribute('aria-valuenow', Math.round(snap.stepElapsedMs / snap.stepDurationMs * 100));
   $('timer-progress').style.width = (snap.overallMs / snap.totalMs * 100).toFixed(1) + '%';
+  $('overall-progress-track').setAttribute('aria-valuenow', Math.round(snap.overallMs / snap.totalMs * 100));
   $('timer-overall-text').textContent = `${formatTime(Math.floor(snap.overallMs / 1000))} / ${formatTime(snap.totalMs / 1000)}`;
   $('timer-unit-note').textContent = volumeNote();
   $('timer-unit-note').hidden = !volumeNote();
@@ -1883,7 +1912,7 @@ function renderDetail() {
   const rows = [[T('Method'), esc(T(r.method))], [T('Coffee Dose'), wt(r.dose, 'coffee')], [T('Total Water'), wt(r.water, 'water')], [T('Ratio'), formatRatio(r.ratio)],
     [T('Temperature'), tempText(r.temp)], [T('Grind Size'), esc(T(r.grind))], [T('Estimated Time'), r.estimate ? esc(r.estimate) : T('Not set')], [T('Timer Total'), formatTime(timerTotal(r))]];
   $('recipe-detail').innerHTML = `
-    <div class="title-row"><h2>${esc(rn(r))}</h2><span class="badge">${r.builtIn ? T('Built-in') : T('Mine')}</span></div>
+    <div class="title-row"><h1 class="view-title">${esc(rn(r))}</h1><span class="badge">${r.builtIn ? T('Built-in') : T('Mine')}</span></div>
     <dl class="summary card">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
     ${volumeNote() ? `<p class="muted small">${volumeNote()}</p>` : ''}
     <h3>${T('Steps')}</h3><ol class="steps">${steps}</ol>
@@ -1992,7 +2021,7 @@ function onFormTriplet(field) {   // same dose/water/ratio rule as the Calculato
   if (field === 'water') $('f-dose').value = wtNum(res.dose); else $('f-water').value = wtNum(res.water);
 }
 function clearFormMarks() {
-  if (state.form) state.form.marked.forEach((el) => el.removeAttribute('aria-invalid'));
+  if (state.form) state.form.marked.forEach((el) => { el.removeAttribute('aria-invalid'); el.removeAttribute('aria-describedby'); });
   if (state.form) state.form.marked = [];
 }
 function showFormErrors(errors) {
@@ -2002,9 +2031,10 @@ function showFormErrors(errors) {
   errors.forEach((e) => {
     const m = /^step-(\d+)-(\w+)$/.exec(e.field);
     const el = m ? document.querySelector(`[data-step="${m[1]}"][data-key="${m[2]}"]`) : (FORM_FIELD_IDS[e.field] ? $(FORM_FIELD_IDS[e.field]) : null);
-    if (el) { el.setAttribute('aria-invalid', 'true'); state.form.marked.push(el); }
+    if (el) { el.setAttribute('aria-invalid', 'true'); el.setAttribute('aria-describedby', 'form-errors'); state.form.marked.push(el); }
   });
   window.scrollTo(0, 0);
+  if (state.form.marked[0]) state.form.marked[0].focus({ preventScroll: true });   // keyboard and screen-reader users land on the first problem
 }
 /* Fields the user did not touch keep their exact stored values, so imperial display rounding never drifts the recipe. */
 function keepUntouchedOriginals(rec, draft, f) {
@@ -2108,6 +2138,25 @@ function handleAction(action, ds) {
 /* ---------- Export / import (JSON backup of your own recipes) ---------- */
 const MAX_IMPORT_BYTES = 1048576, MAX_IMPORT_RECIPES = 200;
 const canon = (r) => { const { id, builtIn, basedOn, ...rest } = r; return JSON.stringify(rest, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v)); };
+/* ---------- Accessibility helpers: page title per view, spoken announcements, skip link ---------- */
+function announce(msg) {
+  const el = $('announcer');
+  el.textContent = '';
+  setTimeout(() => { el.textContent = msg; }, 60);   // clear first so identical messages are spoken again
+}
+function viewLabel() {
+  const main = document.querySelector(`.nav button[data-view="${state.view}"]`);
+  if (main) return main.innerText.trim();
+  const h = document.querySelector(`#view-${state.view} h1`);
+  return h ? h.textContent.trim() : '';
+}
+let lastTitleView = null;
+function updateTitle() {
+  const label = viewLabel();
+  document.title = label ? `${label} · Brew Calculator` : 'Brew Calculator';
+  if (lastTitleView !== null && lastTitleView !== state.view && label) announce(label);   // not on first load
+  lastTitleView = state.view;
+}
 /* ---------- Which version is running? Asked of the active service worker, so it is the one actually in use ---------- */
 function askVersion() {
   return new Promise((resolve) => {
@@ -2265,6 +2314,7 @@ function addReminder() {
 }
 
 function bindRecipeEvents() {
+  $('skip-link').addEventListener('click', () => { $('app').focus(); $('app').scrollIntoView(); });
   $('btn-nudge-export').addEventListener('click', exportRecipes);
   $('btn-nudge-later').addEventListener('click', () => { writeMeta({ snoozedAt: Date.now() }); renderBackupInfo(); });
   $('btn-ics').addEventListener('click', addReminder);
