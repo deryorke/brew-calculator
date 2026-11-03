@@ -1,6 +1,0 @@
-# OPTIONAL. Only for Netlify sites connected to a Git repository (drag-and-drop deploys do not run builds).
-# Put this file at the top level of the repository, next to a tools/ folder that holds stamp-version.py.
-# Not yet run on Netlify by the author: check the first deploy log.
-[build]
-  command = "mkdir -p _site && cp -r index.html sw.js manifest.webmanifest _headers icons screenshots _site/ && python3 tools/stamp-version.py _site"
-  publish = "_site"
