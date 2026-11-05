@@ -1,8 +1,19 @@
-# Netlify and Cloudflare Pages read this file; GitHub Pages ignores it (the service worker handles that case).
+# Netlify and Cloudflare Pages read this file; GitHub Pages ignores it. The Content-Security-Policy lines are written by
+# tools/stamp-version.py (do not edit them by hand). index.html carries the same policy in a <meta> tag, which is what protects
+# GitHub Pages; the header adds frame-ancestors, which a <meta> tag cannot express.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY
+  Cross-Origin-Opener-Policy: same-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000
 /
   Cache-Control: no-cache
+  Content-Security-Policy: default-src 'none'; script-src 'sha256-ttmBUX3CvoqHpiwVPSk38FXHgGeh7AJViPm+i508gPo=' 'sha256-d/3aHnYgU05/p2aIt9bnRn++mqkqbaPij60NomydYGE=' 'sha256-hBMvsnWRPAM2DjI2lq/iEDFj7wxA/NDbTlVTOBsy0oE=' 'sha256-Urhgtb7uvckcfFoZsLnUCfOK95nzUTmFpT/Yws+V1tc=' 'sha256-RKn0QSfUCBMWenpigkZCKIo6757hQQ5vAyvbBBpliew='; style-src 'sha256-RFqPtFrA5SrVIPXzOuyKFM4t9ioN/ks41hjku4NgGdk='; img-src 'self'; manifest-src 'self'; worker-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'
 /index.html
   Cache-Control: no-cache
+  Content-Security-Policy: default-src 'none'; script-src 'sha256-ttmBUX3CvoqHpiwVPSk38FXHgGeh7AJViPm+i508gPo=' 'sha256-d/3aHnYgU05/p2aIt9bnRn++mqkqbaPij60NomydYGE=' 'sha256-hBMvsnWRPAM2DjI2lq/iEDFj7wxA/NDbTlVTOBsy0oE=' 'sha256-Urhgtb7uvckcfFoZsLnUCfOK95nzUTmFpT/Yws+V1tc=' 'sha256-RKn0QSfUCBMWenpigkZCKIo6757hQQ5vAyvbBBpliew='; style-src 'sha256-RFqPtFrA5SrVIPXzOuyKFM4t9ioN/ks41hjku4NgGdk='; img-src 'self'; manifest-src 'self'; worker-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'
 /sw.js
   Cache-Control: no-cache
 /manifest.webmanifest

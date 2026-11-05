@@ -2,6 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ttmBUX3CvoqHpiwVPSk38FXHgGeh7AJViPm+i508gPo=' 'sha256-d/3aHnYgU05/p2aIt9bnRn++mqkqbaPij60NomydYGE=' 'sha256-hBMvsnWRPAM2DjI2lq/iEDFj7wxA/NDbTlVTOBsy0oE=' 'sha256-Urhgtb7uvckcfFoZsLnUCfOK95nzUTmFpT/Yws+V1tc=' 'sha256-RKn0QSfUCBMWenpigkZCKIo6757hQQ5vAyvbBBpliew='; style-src 'sha256-RFqPtFrA5SrVIPXzOuyKFM4t9ioN/ks41hjku4NgGdk='; img-src 'self'; manifest-src 'self'; worker-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="description" content="Brew Calculator: calculate your coffee recipe and brew with confidence.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#70472f">
@@ -115,6 +116,7 @@ dialog .actions{margin-top:1rem}
 @media (min-width:768px){.toast{bottom:1.5rem}}
 .timer-display.long{font-size:clamp(2.6rem,14vw,5rem)}
 .hero-copy{padding:38px 8% 32px;display:flex;align-items:flex-start;flex-direction:column;justify-content:center}
+.eyebrow-center{justify-content:center}
 .eyebrow-line{width:21px;height:1px;background:var(--accent);display:inline-block}
 .hero-description{max-width:280px;margin-bottom:23px;color:var(--muted);font-size:13px}
 .hero-actions{display:flex;flex-wrap:wrap;gap:9px}
@@ -302,7 +304,7 @@ main :is(div,label,section,article,span,p,li){min-width:0}
 
   <section id="view-calculator" class="view" data-view-name="calculator" hidden>
     <div class="page-head"><div class="eyebrow">Precision, made simple</div><h1 class="page-title">Coffee <em>calculator.</em></h1><p class="lead">Adjust your coffee, water, or ratio. The other values follow the one you changed.</p></div>
-    <form id="calc-form" class="card form" onsubmit="return false">
+    <form id="calc-form" class="card form">
       <label>Brewing Method
         <select id="calc-method"></select></label>
       <label>Recipe
@@ -318,8 +320,8 @@ main :is(div,label,section,article,span,p,li){min-width:0}
       <label>Grind Size
         <select id="calc-grind"></select></label>
     </form>
-    <p id="calc-error" class="error" role="alert" hidden></p>
-    <div id="calc-result" class="card result" aria-live="polite">
+    <p id="calc-error" class="error" hidden></p>
+    <div id="calc-result" class="card result">
       <p class="muted">Your results will appear here.</p>
     </div>
     <button class="btn primary" id="btn-calc-to-brew">Go to Brewing</button>
@@ -337,7 +339,7 @@ main :is(div,label,section,article,span,p,li){min-width:0}
   </section>
 
   <section id="view-timer" class="view" data-view-name="timer" hidden>
-    <div class="timer-head"><div class="eyebrow" style="justify-content:center">Take it one pour at a time</div>
+    <div class="timer-head"><div class="eyebrow eyebrow-center">Take it one pour at a time</div>
       <p id="timer-method" class="muted">No method</p>
       <h1 id="timer-recipe" class="view-title">No recipe selected</h1>
     </div>
@@ -421,7 +423,7 @@ main :is(div,label,section,article,span,p,li){min-width:0}
     <h1 id="form-title" class="view-title">Create Recipe</h1>
     <p id="form-banner" class="note" hidden></p>
     <div id="form-errors" class="error" role="alert" hidden></div>
-    <form id="recipe-form" class="card form" onsubmit="return false" novalidate>
+    <form id="recipe-form" class="card form" novalidate>
       <label>Recipe Name <input id="f-name" type="text" maxlength="60" autocomplete="off"></label>
       <label>Brewing Method <select id="f-method"></select></label>
       <label><span>Coffee Dose (<span class="u-wt">g</span>)</span> <input id="f-dose" type="number" inputmode="decimal" step="any"></label>
@@ -785,6 +787,7 @@ main :is(div,label,section,article,span,p,li){min-width:0}
    TM(text)      translates an already-built message (logic-layer validation text) by matching its template.
    Internal data (method names, grind sizes, saved recipes) always stays in English; only the display is translated. */
 const I18N = { lang: 'en', dict: {
+ "Your favorites and settings are saved only on this device and have no backup from the last 30 days. Export them so they cannot be lost.": "Favorit dan pengaturanmu hanya tersimpan di perangkat ini dan belum ada cadangan dalam 30 hari terakhir. Ekspor agar tidak hilang.",
  "Skip to content": "Lewati ke konten",
  "Untitled recipe": "Resep tanpa judul",
  "Ratio must be between 1 and 100 (for example 16 for 1:16).": "Rasio harus antara 1 dan 100 (misalnya 16 untuk 1:16).",
@@ -1247,6 +1250,7 @@ const state = {
               sound: true, vibrate: true, notify: false, autoAdvance: true, timerMode: 'down', units: 'metric', wakeLock: true, waterMeasure: 'weight', language: 'en' }
 };
 
+const DEFAULT_SETTINGS = { ...state.settings };   // what a brand-new install looks like, to tell "customised" from "untouched"
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const getRecipe = (id) => state.recipes.find((r) => r.id === id);
@@ -1430,6 +1434,7 @@ function applyCalcDefaults(recipe) {
   writeCalcInputs();
   setCalcError(null);
   renderCalcResult();
+  scheduleCalcAnnouncement();
 }
 function writeCalcInputs() {   // always formatted from the internal grams / °C
   const c = state.calc;
@@ -1444,8 +1449,20 @@ function setCalcError(message, field) {
   el.textContent = TM(message || '');
   el.hidden = !message;
   Object.entries(CALC_INPUT_IDS).forEach(([key, id]) => {
-    if (message && key === field) $(id).setAttribute('aria-invalid', 'true'); else $(id).removeAttribute('aria-invalid');
+    if (message && key === field) { $(id).setAttribute('aria-invalid', 'true'); $(id).setAttribute('aria-describedby', 'calc-error'); }
+    else { $(id).removeAttribute('aria-invalid'); $(id).removeAttribute('aria-describedby'); }
   });
+}
+/* The result card is not a live region: it changes on every keystroke and would be read out in full each time.
+   Instead one short summary (or the error) is spoken after the person pauses typing. */
+let calcSpeakTimer = null, calcSpoken = '';
+function scheduleCalcAnnouncement() {
+  clearTimeout(calcSpeakTimer);
+  calcSpeakTimer = setTimeout(() => {
+    if (state.view !== 'calculator') return;
+    const c = state.calc, text = c.valid ? T('{dose} coffee + {water} water', { dose: wt(c.dose, 'coffee'), water: wt(c.water, 'water') }) : $('calc-error').textContent;
+    if (text && text !== calcSpoken) { calcSpoken = text; announce(text); }
+  }, 900);
 }
 /* Only the DERIVED field is written back, never the one being typed in, so there are no circular updates. */
 function onCalcInput(field) {
@@ -1466,6 +1483,7 @@ function onCalcInput(field) {
   c.valid = !error;
   setCalcError(error, bad);
   renderCalcResult();
+  scheduleCalcAnnouncement();
 }
 function stepRowsHTML(steps, r) {
   let prev = 0;
@@ -2183,6 +2201,15 @@ async function requestPersist() {
   try { state.persisted = (await navigator.storage.persisted()) || (await navigator.storage.persist()); } catch (e) { state.persisted = undefined; }
   renderBackupInfo();
 }
+/* A short fingerprint of everything an export contains, so a backup can be compared with the data as it is now. */
+function backupSignature() {
+  const settings = {};
+  EXPORT_SETTINGS.forEach((k) => { settings[k] = state.settings[k]; });
+  const text = JSON.stringify({ r: state.userRecipes, f: state.favorites, s: settings });
+  let h = 2166136261;   // FNV-1a
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36) + ':' + text.length;
+}
 function renderBackupInfo() {
   if (state.persisted === undefined && !state.persistChecked && navigator.storage && navigator.storage.persisted) {   // learn the current status once, without asking for anything
     state.persistChecked = true;
@@ -2190,9 +2217,15 @@ function renderBackupInfo() {
   }
   const m = readMeta(), last = num0(m.lastBackup), now = Date.now(), n = state.userRecipes.length;
   const locale = state.settings.language === 'id' ? 'id-ID' : 'en-US';
-  const due = n > 0 && now - last > BACKUP_EVERY_DAYS * DAY_MS && now - num0(m.snoozedAt) > SNOOZE_DAYS * DAY_MS;
+  // Something worth keeping = own recipes, favorites, or settings changed from the defaults.
+  const customised = EXPORT_SETTINGS.some((k) => k !== 'language' && state.settings[k] !== DEFAULT_SETTINGS[k]) || state.settings.language !== DEFAULT_SETTINGS.language;
+  const hasData = n > 0 || state.favorites.length > 0 || customised;
+  // Only nudge when that data differs from the last backup: an unchanged backup never needs repeating.
+  const due = hasData && backupSignature() !== m.lastBackupSig && now - last > BACKUP_EVERY_DAYS * DAY_MS && now - num0(m.snoozedAt) > SNOOZE_DAYS * DAY_MS;
   $('backup-nudge').hidden = !due;
-  if (due) $('backup-nudge-text').textContent = T('You have {n} recipe(s) of your own and no backup from the last 30 days. Export them so they cannot be lost.', { n });
+  if (due) $('backup-nudge-text').textContent = n > 0
+    ? T('You have {n} recipe(s) of your own and no backup from the last 30 days. Export them so they cannot be lost.', { n })
+    : T('Your favorites and settings are saved only on this device and have no backup from the last 30 days. Export them so they cannot be lost.');
   $('backup-status').textContent = last ? T('Last backup: {date}.', { date: new Date(last).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) }) : T('Last backup: never.');
   const ps = $('persist-status');
   ps.hidden = state.persisted === undefined;
@@ -2210,7 +2243,7 @@ function exportRecipes() {
   a.href = url; a.download = `brew-calculator-recipes-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  writeMeta({ lastBackup: Date.now() }); renderBackupInfo(); requestPersist();
+  writeMeta({ lastBackup: Date.now(), lastBackupSig: backupSignature() }); renderBackupInfo(); requestPersist();
   showToast(state.userRecipes.length ? T('Exported {n} recipe(s).', { n: state.userRecipes.length }) : T('Exported your favorites and settings.'));
 }
 async function importRecipes(file) {
@@ -2314,6 +2347,7 @@ function addReminder() {
 }
 
 function bindRecipeEvents() {
+  ['calc-form', 'recipe-form'].forEach((id) => $(id).addEventListener('submit', (e) => e.preventDefault()));   // Enter must never reload the page
   $('skip-link').addEventListener('click', () => { $('app').focus(); $('app').scrollIntoView(); });
   $('btn-nudge-export').addEventListener('click', exportRecipes);
   $('btn-nudge-later').addEventListener('click', () => { writeMeta({ snoozedAt: Date.now() }); renderBackupInfo(); });

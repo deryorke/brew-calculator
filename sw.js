@@ -1,7 +1,7 @@
 /* Brew Calculator service worker: offline app shell.
    CACHE_VERSION is stamped automatically from the app's files by tools/stamp-version.py; run it before each upload
    so installed copies notice the change. Editing the number by hand also works. */
-const CACHE_VERSION = 'cfd1d161ac3';
+const CACHE_VERSION = 'ce2d617a3dc';
 const CACHE = `brew-calculator-${CACHE_VERSION}`;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 
